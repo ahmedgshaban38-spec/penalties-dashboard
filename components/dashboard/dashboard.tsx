@@ -71,14 +71,22 @@ const dict = {
   }
 }
 
-export function Dashboard({ rows: initialRows, source }: { rows: Penalty[]; source: DataSource }) {
+export function Dashboard({ 
+  rows: initialRows, 
+  source, 
+  initialRole = 'SUPERVISOR' 
+}: { 
+  rows: Penalty[]; 
+  source: DataSource; 
+  initialRole?: 'MANAGER' | 'SUPERVISOR' 
+}) {
   const [lang, setLang] = useState<'ar' | 'en'>('ar') 
   const t = dict[lang] 
   
   const [rows, setRows] = useState<Penalty[]>(initialRows)
   const [isDark, setIsDark] = useState(false)
   const [statusFilter, setStatusFilter] = useState('ALL')
-  const [userRole, setUserRole] = useState<'MANAGER' | 'SUPERVISOR'>('MANAGER')
+  const [userRole] = useState<'MANAGER' | 'SUPERVISOR'>(initialRole)
   
   const [aiDraft, setAiDraft] = useState('')
   const [isGeneratingAi, setIsGeneratingAi] = useState(false)
@@ -387,19 +395,10 @@ export function Dashboard({ rows: initialRows, source }: { rows: Penalty[]; sour
               <div className="size-11 rounded-2xl bg-gradient-to-tr from-blue-600 to-purple-600 flex items-center justify-center text-white font-extrabold shadow-md border border-white/20">AG</div>
               <div>
                 <p className="text-sm font-bold text-slate-900 dark:text-white">{t.userName}</p>
-                <p className="text-xs text-blue-600 dark:text-blue-400 font-extrabold">{userRole === 'MANAGER' ? 'مدير العمليات' : 'مشرف فرع'}</p>
+                <p className="text-xs text-blue-600 dark:text-blue-400 font-extrabold">
+                  {userRole === 'MANAGER' ? 'مدير العمليات (صلاحية كاملة)' : 'مشرف الفرع (صلاحية إدخال)'}
+                </p>
               </div>
-            </div>
-
-            <div className="mb-4">
-              <select 
-                value={userRole} 
-                onChange={(e) => setUserRole(e.target.value as 'MANAGER' | 'SUPERVISOR')}
-                className="w-full text-xs font-bold py-2 px-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 outline-none"
-              >
-                <option value="MANAGER">{t.roleManager}</option>
-                <option value="SUPERVISOR">{t.roleSupervisor}</option>
-              </select>
             </div>
 
             <div className="flex gap-2">
