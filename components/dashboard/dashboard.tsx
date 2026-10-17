@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, useEffect, useRef } from 'react'
-import { AlertCircle, Database, Truck, LayoutDashboard, AlertTriangle, FileText, Store, LogOut, Plus, Download, Printer, X, Globe, Link as LinkIcon, MapPin, CheckCircle, Moon, Sun, ShieldCheck, TrendingUp, ArrowUpRight, Bell, Filter, Clock, Shield, Sparkles, History, FileDown, Award, Users } from 'lucide-react'
+import { AlertCircle, Database, Truck, LayoutDashboard, AlertTriangle, FileText, Store, LogOut, Plus, Download, Printer, X, Globe, Link as LinkIcon, MapPin, CheckCircle, Moon, Sun, ShieldCheck, TrendingUp, ArrowUpRight, Bell, Filter, Clock, Shield, Sparkles, History, FileDown, Award, Users, Upload, Image as ImageIcon, Loader2 } from 'lucide-react'
 import type { DataSource, Penalty } from '@/lib/penalties'
 import { supabase } from '@/lib/supabase'
 import { BranchFilter, ALL_BRANCHES } from './branch-filter'
@@ -25,7 +25,7 @@ const dict = {
     underReview: 'قيد المراجعة', rejected: 'مرفوضة', refunded: 'تم الاسترداد', missingImage: 'بدون صورة',
     successMsg: 'تم حفظ المخالفة بنجاح في قاعدة البيانات!', headers: ['التاريخ', 'التطبيق', 'اسم المطعم', 'البراند', 'الفرع', 'رقم الطلب', 'المبلغ', 'السبب', 'الحالة'],
     claimFormTitle: 'تقديم مطالبة جديدة', claimOrderNumber: 'رقم الطلب', claimStatus: 'حالة المطالبة',
-    claimRejectionReason: 'سبب الرفض (إن وجد)', claimEvidence: 'رابط الإثبات', saveClaim: 'حفظ المطالبة',
+    claimRejectionReason: 'سبب الرفض (إن وجد)', claimEvidence: 'صورة الإثبات أو الفاتورة', saveClaim: 'حفظ المطالبة',
     claimSuccess: 'تم حفظ المطالبة بنجاح في قاعدة البيانات!',
     restaurantsGuideDesc: 'تحليل شامل لأداء الفروع، حجم الغرامات، ونسب التأثير التشغيلي.',
     branchesCount: 'فروع نشطة', totalFines: 'إجمالي الغرامات', penaltiesCount: 'مخالفات مسجلة',
@@ -54,7 +54,7 @@ const dict = {
     underReview: 'Under Review', rejected: 'Rejected', refunded: 'Refunded', missingImage: 'Missing Image',
     successMsg: 'Penalty saved successfully in database!', headers: ['Date', 'App', 'Restaurant', 'Brand', 'Branch', 'Order No', 'Amount', 'Reason', 'Status'],
     claimFormTitle: 'Submit New Claim', claimOrderNumber: 'Order Number', claimStatus: 'Claim Status',
-    claimRejectionReason: 'Rejection Reason', claimEvidence: 'Evidence Link', saveClaim: 'Save Claim',
+    claimRejectionReason: 'Rejection Reason', claimEvidence: 'Evidence or Receipt Image', saveClaim: 'Save Claim',
     claimSuccess: 'Claim saved successfully in database!',
     restaurantsGuideDesc: 'Comprehensive analysis of branch performance, fine volume, and operational impact.',
     branchesCount: 'Active Branches', totalFines: 'Total Fines', penaltiesCount: 'Recorded Penalties',
@@ -95,18 +95,17 @@ export function Dashboard({
   const [aiDraft, setAiDraft] = useState('')
   const [isGeneratingAi, setIsGeneratingAi] = useState(false)
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false)
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
   const reportRef = useRef<HTMLDivElement>(null)
 
   const [auditLogs, setAuditLogs] = useState<Array<{ id: number; action: string; user: string; time: string; type: 'success' | 'info' | 'warning' }>>([
     { id: 1, action: 'تسجيل الدخول للنظام والاتصال بقاعدة البيانات', user: userName, time: 'الآن', type: 'info' }
   ])
 
-  // تحديث الصفوف عند جلبها من صفحة البداية
   useEffect(() => {
     setRows(initialRows)
   }, [initialRows])
 
-  // جلب المطالبات من جدول claims
   useEffect(() => {
     const fetchClaims = async () => {
       try {
@@ -282,6 +281,36 @@ export function Dashboard({
       showToast('تم توليد مسودة الاعتراض بنجاح!', 'success')
       setAuditLogs(prev => [{ id: Date.now(), action: 'توليد مسودة اعتراض بالذكاء الاصطناعي للطلب ' + (claimData.orderNumber || ''), user: userName, time: 'الآن', type: 'success' }, ...prev])
     }, 800)
+  }
+
+  // دالة رفع الصور إلى Supabase Storage
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsUploadingImage(true)
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `evidence_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
+      const filePath = `${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('evidence')
+        .upload(filePath, file)
+
+      if (uploadError) {
+        throw uploadError
+      }
+
+      const { data } = supabase.storage.from('evidence').getPublicUrl(filePath)
+      setClaimData(prev => ({ ...prev, evidenceLink: data.publicUrl }))
+      showToast('تم رفع صورة الإثبات بنجاح!', 'success')
+    } catch (error: any) {
+      console.error('Error uploading image:', error)
+      showToast(`فشل رفع الصورة: ${error.message || 'خطأ غير معروف'}`, 'error')
+    } finally {
+      setIsUploadingImage(false)
+    }
   }
 
   // حفظ المخالفة في Supabase مباشرة
@@ -728,15 +757,54 @@ export function Dashboard({
                     )}
 
                     <form onSubmit={handleSubmitClaim} className="grid grid-cols-1 md:grid-cols-2 gap-8 relative">
-                      <div className="space-y-3"><label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.claimOrderNumber} <span className="text-red-500">*</span></label><input type="text" required className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none text-slate-900 dark:text-white" value={claimData.orderNumber} onChange={e => setClaimData({...claimData, orderNumber: e.target.value})} /></div>
-                      <div className="space-y-3"><label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.claimStatus} <span className="text-red-500">*</span></label>
+                      <div className="space-y-3">
+                        <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.claimOrderNumber} <span className="text-red-500">*</span></label>
+                        <input type="text" required className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none text-slate-900 dark:text-white" value={claimData.orderNumber} onChange={e => setClaimData({...claimData, orderNumber: e.target.value})} />
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.claimStatus} <span className="text-red-500">*</span></label>
                         <select required className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none text-slate-900 dark:text-white" value={claimData.status} onChange={e => setClaimData({...claimData, status: e.target.value})}>
-                          <option value={t.underReview} className="bg-white dark:bg-[#060913]">{t.underReview}</option><option value={t.refunded} className="bg-white dark:bg-[#060913]">{t.refunded}</option><option value={t.rejected} className="bg-white dark:bg-[#060913]">{t.rejected}</option><option value={t.missingImage} className="bg-white dark:bg-[#060913]">{t.missingImage}</option>
+                          <option value={t.underReview} className="bg-white dark:bg-[#060913]">{t.underReview}</option>
+                          <option value={t.refunded} className="bg-white dark:bg-[#060913]">{t.refunded}</option>
+                          <option value={t.rejected} className="bg-white dark:bg-[#060913]">{t.rejected}</option>
+                          <option value={t.missingImage} className="bg-white dark:bg-[#060913]">{t.missingImage}</option>
                         </select>
                       </div>
-                      <div className="space-y-3"><label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.claimRejectionReason}</label><input type="text" className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none text-slate-900 dark:text-white" value={claimData.rejectionReason} onChange={e => setClaimData({...claimData, rejectionReason: e.target.value})} /></div>
-                      <div className="space-y-3"><label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.claimEvidence}</label><input type="url" className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none text-slate-900 dark:text-white" value={claimData.evidenceLink} onChange={e => setClaimData({...claimData, evidenceLink: e.target.value})} /></div>
-                      <div className="md:col-span-2 flex justify-end mt-4 pt-8 border-t border-slate-100 dark:border-white/10"><button type="submit" className="px-10 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-sm font-extrabold shadow-xl shadow-blue-500/25 transition-all hover:-translate-y-0.5 border border-white/20">{t.saveClaim}</button></div>
+
+                      <div className="space-y-3 md:col-span-2">
+                        <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.claimRejectionReason}</label>
+                        <input type="text" className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none text-slate-900 dark:text-white" value={claimData.rejectionReason} onChange={e => setClaimData({...claimData, rejectionReason: e.target.value})} />
+                      </div>
+
+                      <div className="space-y-3 md:col-span-2">
+                        <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.claimEvidence}</label>
+                        <div className="flex flex-col sm:flex-row items-center gap-4">
+                          <label className="flex-1 w-full flex items-center justify-center gap-3 h-14 px-5 rounded-2xl border-2 border-dashed border-slate-300 dark:border-white/20 bg-slate-50 dark:bg-[#060913] hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer transition-all">
+                            {isUploadingImage ? (
+                              <Loader2 className="size-5 text-blue-500 animate-spin" />
+                            ) : (
+                              <Upload className="size-5 text-blue-500" />
+                            )}
+                            <span className="text-sm font-bold text-slate-600 dark:text-slate-300">
+                              {isUploadingImage ? 'جاري رفع الصورة إلى التخزين...' : 'اختر صورة من جهازك للرفع المباشر'}
+                            </span>
+                            <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} disabled={isUploadingImage} />
+                          </label>
+
+                          {claimData.evidenceLink && (
+                            <a href={claimData.evidenceLink} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-4 py-3.5 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl text-xs font-bold border border-blue-500/20 whitespace-nowrap hover:underline">
+                              <ImageIcon className="size-4" /> معاينة الصورة المرفوعة
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="md:col-span-2 flex justify-end mt-4 pt-8 border-t border-slate-100 dark:border-white/10">
+                        <button type="submit" disabled={isUploadingImage} className="px-10 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-sm font-extrabold shadow-xl shadow-blue-500/25 transition-all hover:-translate-y-0.5 border border-white/20 disabled:opacity-50">
+                          {t.saveClaim}
+                        </button>
+                      </div>
                     </form>
                   </div>
 
@@ -749,8 +817,16 @@ export function Dashboard({
                           {claimsList.length === 0 ? (<tr><td colSpan={5} className="px-6 py-16 text-center text-slate-400 font-medium">لا توجد مطالبات مسجلة حتى الآن</td></tr>) : (
                             claimsList.map((r, i) => (
                               <tr key={i} className="border-b border-slate-100 dark:border-white/5 last:border-0 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
-                                <td className="px-6 py-5 font-mono text-sm font-bold text-slate-800 dark:text-slate-200" dir="ltr">{r.orderNumber}</td><td className="px-6 py-5 font-bold text-slate-900 dark:text-white whitespace-nowrap">{r.branch}</td><td className="px-6 py-5 text-slate-600 dark:text-slate-300 font-medium">{(r as any).rejectionReason || '—'}</td>
-                                <td className="px-6 py-5">{(r as any).evidenceLink ? (<a href={(r as any).evidenceLink} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold hover:underline bg-blue-50 dark:bg-blue-500/10 px-3 py-1.5 rounded-xl w-fit border border-blue-500/20"><LinkIcon className="size-4" /> عرض</a>) : '—'}</td>
+                                <td className="px-6 py-5 font-mono text-sm font-bold text-slate-800 dark:text-slate-200" dir="ltr">{r.orderNumber}</td>
+                                <td className="px-6 py-5 font-bold text-slate-900 dark:text-white whitespace-nowrap">{r.branch}</td>
+                                <td className="px-6 py-5 text-slate-600 dark:text-slate-300 font-medium">{(r as any).rejectionReason || '—'}</td>
+                                <td className="px-6 py-5">
+                                  {(r as any).evidenceLink ? (
+                                    <a href={(r as any).evidenceLink} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold hover:underline bg-blue-50 dark:bg-blue-500/10 px-3 py-1.5 rounded-xl w-fit border border-blue-500/20">
+                                      <ImageIcon className="size-4" /> فتح الإثبات
+                                    </a>
+                                  ) : '—'}
+                                </td>
                                 <td className="px-6 py-5"><span className={`px-4 py-2 rounded-xl text-xs font-bold shadow-sm ${r.status === t.refunded ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30' : r.status === t.rejected ? 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 border border-red-500/30' : r.status === t.missingImage ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/30' : 'bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 border border-white/10'}`}>{r.status}</span></td>
                               </tr>
                             ))
