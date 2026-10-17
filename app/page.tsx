@@ -15,10 +15,10 @@ export default function Page() {
   const [isLoggingIn, setIsLoggingIn] = useState(false)
 
   const [rows, setRows] = useState<Penalty[]>([])
-  const [source, setSource] = useState<DataSource>('google-sheets')
+  const [source, setSource] = useState<DataSource>('supabase' as DataSource)
 
   useEffect(() => {
-    // 1. فحص الجلسة الحالية من Supabase
+    // 1. فحص الجلسة الحالية
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       if (session) {
@@ -28,7 +28,7 @@ export default function Page() {
       }
     })
 
-    // 2. الاستماع لتغيرات الجلسة (تسجيل دخول / تسجيل خروج)
+    // 2. الاستماع لتغيرات الجلسة
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
       if (session) {
@@ -44,14 +44,34 @@ export default function Page() {
   const fetchData = async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/penalties')
-      if (res.ok) {
-        const data = await res.json()
-        setRows(data.rows || [])
-        setSource(data.source || 'google-sheets')
+      // جلب المخالفات مباشرة من جدول penalties في Supabase
+      const { data, error } = await supabase
+        .from('penalties')
+        .select('*')
+        .order('id', { ascending: false })
+
+      if (error) {
+        console.error('خطأ في جلب البيانات من Supabase:', error.message)
+      }
+
+      if (data && data.length > 0) {
+        const formatted = data.map((item: any) => ({
+          date: item.date || item.created_at,
+          app: item.app,
+          branch: item.branch,
+          orderNumber: item.order_number,
+          amount: Number(item.amount) || 0,
+          reason: item.reason,
+          status: item.status,
+          restaurantName: item.restaurant_name,
+          brand: item.brand
+        }))
+        setRows(formatted)
+      } else {
+        setRows([])
       }
     } catch (e) {
-      console.error('Error fetching data:', e)
+      console.error('حدث خطأ غير متوقع:', e)
     } finally {
       setLoading(false)
     }
@@ -73,7 +93,6 @@ export default function Page() {
     }
   }
 
-  // شاشة التحميل الأولية
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white">
@@ -83,7 +102,6 @@ export default function Page() {
     )
   }
 
-  // إذا كان المستخدم غير مسجل، تظهر شاشة تسجيل الدخول
   if (!session) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 selection:bg-blue-600 selection:text-white" dir="rtl">
@@ -156,7 +174,6 @@ export default function Page() {
     )
   }
 
-  // إذا كان المستخدم مسجلاً، تعرض لوحة التحكم وتمرر صلاحيته واسمه المحدد في Supabase
   return (
     <Dashboard 
       rows={rows} 
