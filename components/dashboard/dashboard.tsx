@@ -14,7 +14,7 @@ const dict = {
   ar: {
     sidebarTitle: 'إدارة المطالبات', sidebarSubtitle: 'نظام العمليات المتقدم', dashboard: 'لوحة التحكم',
     penalties: 'المخالفات', claims: 'المطالبات', restaurants: 'المطاعم والفروع', auditLog: 'سجل التدقيق',
-    teamLeaderboard: 'أداء الفريق', userName: 'أحمد جمال', logout: 'تسجيل الخروج', switchLang: 'English',
+    teamLeaderboard: 'أداء الفريق', logout: 'تسجيل الخروج', switchLang: 'English',
     overview: 'نظرة عامة على العمليات', managePenalties: 'إدارة المخالفات', claimsHistory: 'سجل المطالبات',
     restaurantsGuide: 'دليل الأداء والفروع', connected: 'متصل بنظام التشغيل المحلي', records: 'سجل نشط',
     addPenalty: 'تسجيل مخالفة', exportExcel: 'تصدير إكسيل', printReport: 'طباعة تقرير PDF', downloadPdf: 'تحميل ملف PDF',
@@ -43,7 +43,7 @@ const dict = {
   en: {
     sidebarTitle: 'Claims Ops', sidebarSubtitle: 'Enterprise Engine', dashboard: 'Dashboard',
     penalties: 'Penalties', claims: 'Claims', restaurants: 'Restaurants', auditLog: 'Audit Log',
-    teamLeaderboard: 'Team Performance', userName: 'Ahmed Gamal', logout: 'Log Out', switchLang: 'العربية',
+    teamLeaderboard: 'Team Performance', logout: 'Log Out', switchLang: 'العربية',
     overview: 'Operations Overview', managePenalties: 'Penalties Log', claimsHistory: 'Claims Management',
     restaurantsGuide: 'Branches & Performance', connected: 'Local System Connected', records: 'active records',
     addPenalty: 'Log Penalty', exportExcel: 'Export Excel', printReport: 'Print PDF Report', downloadPdf: 'Download PDF',
@@ -74,11 +74,13 @@ const dict = {
 export function Dashboard({ 
   rows: initialRows, 
   source, 
-  initialRole = 'SUPERVISOR' 
+  initialRole = 'SUPERVISOR',
+  userName = 'أحمد جمال'
 }: { 
   rows: Penalty[]; 
   source: DataSource; 
-  initialRole?: 'MANAGER' | 'SUPERVISOR' 
+  initialRole?: 'MANAGER' | 'SUPERVISOR';
+  userName?: string;
 }) {
   const [lang, setLang] = useState<'ar' | 'en'>('ar') 
   const t = dict[lang] 
@@ -94,9 +96,9 @@ export function Dashboard({
   const reportRef = useRef<HTMLDivElement>(null)
 
   const [auditLogs, setAuditLogs] = useState<Array<{ id: number; action: string; user: string; time: string; type: 'success' | 'info' | 'warning' }>>([
-    { id: 1, action: 'تسجيل غرامة جديدة برقم الطلب 1783321025', user: 'أحمد جمال', time: 'منذ ساعتين', type: 'info' },
-    { id: 2, action: 'تحديث حالة المطالبة إلى قيد المراجعة', user: 'أحمد جمال', time: 'منذ 4 ساعات', type: 'warning' },
-    { id: 3, action: 'تصدير التقرير التنفيذي بصيغة CSV', user: 'أحمد جمال', time: 'أمس', type: 'success' }
+    { id: 1, action: 'تسجيل غرامة جديدة برقم الطلب 1783321025', user: userName, time: 'منذ ساعتين', type: 'info' },
+    { id: 2, action: 'تحديث حالة المطالبة إلى قيد المراجعة', user: userName, time: 'منذ 4 ساعات', type: 'warning' },
+    { id: 3, action: 'تصدير التقرير التنفيذي بصيغة CSV', user: userName, time: 'أمس', type: 'success' }
   ])
 
   useEffect(() => {
@@ -223,12 +225,12 @@ export function Dashboard({
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `Penalties_Report.csv`; link.click();
     
-    setAuditLogs(prev => [{ id: Date.now(), action: 'تصدير تقرير إكسيل للعمليات', user: t.userName, time: 'الآن', type: 'success' }, ...prev])
+    setAuditLogs(prev => [{ id: Date.now(), action: 'تصدير تقرير إكسيل للعمليات', user: userName, time: 'الآن', type: 'success' }, ...prev])
   }
 
   const handlePrintReport = () => {
     window.print();
-    setAuditLogs(prev => [{ id: Date.now(), action: 'طباعة التقرير التنفيذي للغرامات', user: t.userName, time: 'الآن', type: 'success' }, ...prev])
+    setAuditLogs(prev => [{ id: Date.now(), action: 'طباعة التقرير التنفيذي للغرامات', user: userName, time: 'الآن', type: 'success' }, ...prev])
   }
 
   const handleDownloadPdf = async () => {
@@ -238,7 +240,7 @@ export function Dashboard({
         window.print()
         setIsDownloadingPdf(false)
         showToast('تم إعداد وتحميل ملف الـ PDF بنجاح!', 'success')
-        setAuditLogs(prev => [{ id: Date.now(), action: 'تحميل التقرير بصيغة PDF مباشرة', user: t.userName, time: 'الآن', type: 'success' }, ...prev])
+        setAuditLogs(prev => [{ id: Date.now(), action: 'تحميل التقرير بصيغة PDF مباشرة', user: userName, time: 'الآن', type: 'success' }, ...prev])
       }, 600)
     } catch (err) {
       setIsDownloadingPdf(false)
@@ -249,10 +251,10 @@ export function Dashboard({
   const handleGenerateAiObjection = () => {
     setIsGeneratingAi(true)
     setTimeout(() => {
-      setAiDraft(`السادة إدارة دعم منصة التوصيل المحترمين،\n\nنود إفادتكم بأن الغرامة المالية المسجلة على الطلب رقم (${claimData.orderNumber || 'غير محدد'}) غير مبررة، حيث أننا قمنا بمراجعة الكاميرات وسجلات المطبخ وتبين التزام الفرع بكافة معايير الجودة والتحضير في الوقت المحدد.\n\nلذا نرجو التكرم بإعادة مراجعة الحالة وإلغاء الخصم ورد المبلغ لصالح المحفظة في أقرب وقت.\n\nولكم جزيل الشكر،\nإدارة العمليات - ${t.userName}`)
+      setAiDraft(`السادة إدارة دعم منصة التوصيل المحترمين،\n\nنود إفادتكم بأن الغرامة المالية المسجلة على الطلب رقم (${claimData.orderNumber || 'غير محدد'}) غير مبررة، حيث أننا قمنا بمراجعة الكاميرات وسجلات المطبخ وتبين التزام الفرع بكافة معايير الجودة والتحضير في الوقت المحدد.\n\nلذا نرجو التكرم بإعادة مراجعة الحالة وإلغاء الخصم ورد المبلغ لصالح المحفظة في أقرب وقت.\n\nولكم جزيل الشكر،\nإدارة العمليات - ${userName}`)
       setIsGeneratingAi(false)
       showToast('تم توليد مسودة الاعتراض بنجاح!', 'success')
-      setAuditLogs(prev => [{ id: Date.now(), action: 'توليد مسودة اعتراض بالذكاء الاصطناعي للطلب ' + (claimData.orderNumber || ''), user: t.userName, time: 'الآن', type: 'success' }, ...prev])
+      setAuditLogs(prev => [{ id: Date.now(), action: 'توليد مسودة اعتراض بالذكاء الاصطناعي للطلب ' + (claimData.orderNumber || ''), user: userName, time: 'الآن', type: 'success' }, ...prev])
     }, 800)
   }
 
@@ -274,19 +276,28 @@ export function Dashboard({
     showToast(t.successMsg, 'success');
     setIsAddModalOpen(false);
     setFormData({ app: '', restaurantName: '', brand: '', branch: '', orderNumber: '', amount: '', refundedAmount: '', reason: '', status: t.underReview });
-    setAuditLogs(prev => [{ id: Date.now(), action: `تسجيل مخالفة جديدة بقيمة ${formData.amount} رس لفرع ${formData.branch}`, user: t.userName, time: 'الآن', type: 'info' }, ...prev]);
+    setAuditLogs(prev => [{ id: Date.now(), action: `تسجيل مخالفة جديدة بقيمة ${formData.amount} رس لفرع ${formData.branch}`, user: userName, time: 'الآن', type: 'info' }, ...prev]);
   }
 
   const handleSubmitClaim = (e: React.FormEvent) => {
     e.preventDefault();
     showToast(t.claimSuccess, 'success');
     setClaimData({ orderNumber: '', status: t.rejected, rejectionReason: '', evidenceLink: '' });
-    setAuditLogs(prev => [{ id: Date.now(), action: `تقديم مطالبة جديدة للطلب ${claimData.orderNumber}`, user: t.userName, time: 'الآن', type: 'warning' }, ...prev]);
+    setAuditLogs(prev => [{ id: Date.now(), action: `تقديم مطالبة جديدة للطلب ${claimData.orderNumber}`, user: userName, time: 'الآن', type: 'warning' }, ...prev]);
   }
 
   const isRtl = lang === 'ar';
   const sidebarPosition = isRtl ? 'right-0' : 'left-0';
   const mainMargin = isRtl ? 'mr-72' : 'ml-72';
+
+  // استخراج الأحرف الأولى للعرض في الأيقونة
+  const userInitials = useMemo(() => {
+    const parts = userName.trim().split(' ')
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase()
+    }
+    return userName.slice(0, 2).toUpperCase()
+  }, [userName])
 
   return (
     <div className="min-h-screen flex bg-slate-50 dark:bg-[#030712] text-slate-900 dark:text-slate-100 font-sans relative overflow-x-hidden transition-colors duration-300 selection:bg-blue-600 selection:text-white" dir={isRtl ? 'rtl' : 'ltr'}>
@@ -295,7 +306,7 @@ export function Dashboard({
         <div className="border-b-2 border-black pb-6 mb-8 flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-black text-black">{t.printHeaderTitle}</h1>
-            <p className="text-sm text-gray-600 mt-1">{t.userName} · {userRole === 'MANAGER' ? t.roleManager : t.roleSupervisor}</p>
+            <p className="text-sm text-gray-600 mt-1">{userName} · {userRole === 'MANAGER' ? t.roleManager : t.roleSupervisor}</p>
           </div>
           <div className="text-left">
             <p className="text-sm font-bold">{t.printDate} {new Date().toLocaleDateString()}</p>
@@ -392,10 +403,12 @@ export function Dashboard({
 
           <div className="p-6 border-t border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#060913]">
             <div className="flex items-center gap-3 mb-4 px-2">
-              <div className="size-11 rounded-2xl bg-gradient-to-tr from-blue-600 to-purple-600 flex items-center justify-center text-white font-extrabold shadow-md border border-white/20">AG</div>
-              <div>
-                <p className="text-sm font-bold text-slate-900 dark:text-white">{t.userName}</p>
-                <p className="text-xs text-blue-600 dark:text-blue-400 font-extrabold">
+              <div className="size-11 rounded-2xl bg-gradient-to-tr from-blue-600 to-purple-600 flex items-center justify-center text-white font-extrabold shadow-md border border-white/20 text-xs">
+                {userInitials}
+              </div>
+              <div className="overflow-hidden">
+                <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{userName}</p>
+                <p className="text-xs text-blue-600 dark:text-blue-400 font-extrabold truncate">
                   {userRole === 'MANAGER' ? 'مدير العمليات (صلاحية كاملة)' : 'مشرف الفرع (صلاحية إدخال)'}
                 </p>
               </div>
@@ -712,7 +725,7 @@ export function Dashboard({
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {[
-                      { name: 'أحمد جمال', role: 'مدير العمليات الأول', resolved: 42, recovered: '14,500 رس', rank: 'الأول 🥇' },
+                      { name: userName, role: userRole === 'MANAGER' ? 'مدير العمليات الأول' : 'مشرف العمليات', resolved: 42, recovered: '14,500 رس', rank: 'الأول 🥇' },
                       { name: 'مشرف فرع الرمان', role: 'مسؤول المتابعة', resolved: 28, recovered: '8,200 رس', rank: 'الثاني 🥈' },
                       { name: 'مشرف فرع النخيل', role: 'مسؤول العمليات', resolved: 19, recovered: '5,100 رس', rank: 'الثالث 🥉' }
                     ].map((leader, i) => (
