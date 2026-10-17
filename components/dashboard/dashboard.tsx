@@ -408,8 +408,7 @@ export function Dashboard({ rows: initialRows, source }: { rows: Penalty[]; sour
               <button 
                 type="button"
                 onClick={async () => {
-                  const { createClient } = await import('@/utils/supabase/client')
-                  const supabase = createClient()
+                  const { supabase } = await import('@/lib/supabase')
                   await supabase.auth.signOut()
                   window.location.href = '/'
                 }}
