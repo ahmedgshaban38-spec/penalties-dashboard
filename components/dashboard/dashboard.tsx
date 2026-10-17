@@ -14,7 +14,7 @@ const dict = {
   ar: {
     sidebarTitle: 'إدارة المطالبات', sidebarSubtitle: 'نظام العمليات المتقدم', dashboard: 'لوحة التحكم',
     penalties: 'المخالفات', claims: 'المطالبات', restaurants: 'المطاعم والفروع', auditLog: 'سجل التدقيق',
-    teamLeaderboard: 'أداء الفريق', logout: 'تسجيل الخروج', switchLang: 'English',
+    teamLeaderboard: 'أداء الفريق', userName: 'أحمد جمال', logout: 'تسجيل الخروج', switchLang: 'English',
     overview: 'نظرة عامة على العمليات', managePenalties: 'إدارة المخالفات', claimsHistory: 'سجل المطالبات',
     restaurantsGuide: 'دليل الأداء والفروع', connected: 'متصل بنظام التشغيل المحلي', records: 'سجل نشط',
     addPenalty: 'تسجيل مخالفة', exportExcel: 'تصدير إكسيل', printReport: 'طباعة تقرير PDF', downloadPdf: 'تحميل ملف PDF',
@@ -43,7 +43,7 @@ const dict = {
   en: {
     sidebarTitle: 'Claims Ops', sidebarSubtitle: 'Enterprise Engine', dashboard: 'Dashboard',
     penalties: 'Penalties', claims: 'Claims', restaurants: 'Restaurants', auditLog: 'Audit Log',
-    teamLeaderboard: 'Team Performance', logout: 'Log Out', switchLang: 'العربية',
+    teamLeaderboard: 'Team Performance', userName: 'Ahmed Gamal', logout: 'Log Out', switchLang: 'العربية',
     overview: 'Operations Overview', managePenalties: 'Penalties Log', claimsHistory: 'Claims Management',
     restaurantsGuide: 'Branches & Performance', connected: 'Local System Connected', records: 'active records',
     addPenalty: 'Log Penalty', exportExcel: 'Export Excel', printReport: 'Print PDF Report', downloadPdf: 'Download PDF',
@@ -290,8 +290,8 @@ export function Dashboard({
   const sidebarPosition = isRtl ? 'right-0' : 'left-0';
   const mainMargin = isRtl ? 'mr-72' : 'ml-72';
 
-  // استخراج الأحرف الأولى للعرض في الأيقونة
   const userInitials = useMemo(() => {
+    if (!userName) return 'U'
     const parts = userName.trim().split(' ')
     if (parts.length >= 2) {
       return (parts[0][0] + parts[1][0]).toUpperCase()
