@@ -156,12 +156,13 @@ export default function Page() {
     )
   }
 
-// إذا كان المستخدم مسجلاً، تعرض لوحة التحكم وتمرر صلاحيته واسمه المحدد في Supabase
+  // إذا كان المستخدم مسجلاً، تعرض لوحة التحكم وتمرر صلاحيته واسمه المحدد في Supabase
   return (
     <Dashboard 
       rows={rows} 
       source={source} 
       initialRole={session?.user?.user_metadata?.role || 'SUPERVISOR'} 
-      userName={session?.user?.user_metadata?.name || session?.user?.email?.split('@')[0] || 'المستخدم'}
+      userName={session?.user?.user_metadata?.name || session?.user?.email?.split('@')[0] || 'مشرف الفرع'}
     />
   )
+}
