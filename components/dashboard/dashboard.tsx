@@ -17,7 +17,7 @@ const dict = {
     penalties: 'المخالفات', claims: 'المطالبات', restaurants: 'المطاعم والفروع', auditLog: 'سجل التدقيق',
     teamLeaderboard: 'أداء الفريق', userName: 'أحمد جمال', logout: 'تسجيل الخروج', switchLang: 'English',
     overview: 'نظرة عامة على العمليات', managePenalties: 'إدارة المخالفات', claimsHistory: 'سجل المطالبات',
-    restaurantsGuide: 'دليل الأداء والفروع', connected: 'متصل بنظام التشغيل وقاعدة البيانات', records: 'سجل نشط',
+    restaurantsGuide: 'دليل الأداء والفروع', connected: 'قاعدة بيانات Supabase متصلة', records: 'سجل محفوظ',
     addPenalty: 'تسجيل مخالفة', exportExcel: 'تصدير إكسيل', printReport: 'طباعة تقرير PDF', downloadPdf: 'تحميل ملف PDF',
     addNewPenalty: 'تسجيل مخالفة جديدة', app: 'التطبيق', restaurantName: 'اسم المطعم', brand: 'البراند', branch: 'الفرع',
     orderNumber: 'رقم الطلب', amount: 'مبلغ المخالفة (رس)', refundedAmount: 'المبلغ المسترد (رس)', reason: 'سبب المخالفة', status: 'الحالة',
@@ -46,16 +46,16 @@ const dict = {
     penalties: 'Penalties', claims: 'Claims', restaurants: 'Restaurants', auditLog: 'Audit Log',
     teamLeaderboard: 'Team Performance', userName: 'Ahmed Gamal', logout: 'Log Out', switchLang: 'العربية',
     overview: 'Operations Overview', managePenalties: 'Penalties Log', claimsHistory: 'Claims Management',
-    restaurantsGuide: 'Branches & Performance', connected: 'Database Connected', records: 'active records',
+    restaurantsGuide: 'Branches & Performance', connected: 'Database Connected', records: 'records',
     addPenalty: 'Log Penalty', exportExcel: 'Export Excel', printReport: 'Print PDF Report', downloadPdf: 'Download PDF',
     addNewPenalty: 'Add New Penalty', app: 'App', restaurantName: 'Restaurant', brand: 'Brand', branch: 'Branch',
     orderNumber: 'Order Number', amount: 'Amount (SAR)', refundedAmount: 'Refunded (SAR)', reason: 'Reason', status: 'Status',
     cancel: 'Cancel', save: 'Save Record', selectApp: 'Select App...', 
     underReview: 'Under Review', rejected: 'Rejected', refunded: 'Refunded', missingImage: 'Missing Image',
-    successMsg: 'Penalty saved successfully in Supabase!', headers: ['Date', 'App', 'Restaurant', 'Brand', 'Branch', 'Order No', 'Amount', 'Reason', 'Status'],
+    successMsg: 'Penalty saved successfully in database!', headers: ['Date', 'App', 'Restaurant', 'Brand', 'Branch', 'Order No', 'Amount', 'Reason', 'Status'],
     claimFormTitle: 'Submit New Claim', claimOrderNumber: 'Order Number', claimStatus: 'Claim Status',
     claimRejectionReason: 'Rejection Reason', claimEvidence: 'Evidence Link', saveClaim: 'Save Claim',
-    claimSuccess: 'Claim saved successfully in Supabase!',
+    claimSuccess: 'Claim saved successfully in database!',
     restaurantsGuideDesc: 'Comprehensive analysis of branch performance, fine volume, and operational impact.',
     branchesCount: 'Active Branches', totalFines: 'Total Fines', penaltiesCount: 'Recorded Penalties',
     recoveryTitle: 'Recovery & Profit Efficiency Calculator', recoverySubtitle: 'Real-time tracking of refunded amounts vs total deducted fines',
@@ -98,17 +98,15 @@ export function Dashboard({
   const reportRef = useRef<HTMLDivElement>(null)
 
   const [auditLogs, setAuditLogs] = useState<Array<{ id: number; action: string; user: string; time: string; type: 'success' | 'info' | 'warning' }>>([
-    { id: 1, action: 'تسجيل غرامة جديدة برقم الطلب 1783321025', user: userName, time: 'منذ ساعتين', type: 'info' },
-    { id: 2, action: 'تحديث حالة المطالبة إلى قيد المراجعة', user: userName, time: 'منذ 4 ساعات', type: 'warning' },
-    { id: 3, action: 'تصدير التقرير التنفيذي بصيغة CSV', user: userName, time: 'أمس', type: 'success' }
+    { id: 1, action: 'تسجيل الدخول للنظام والاتصال بقاعدة البيانات', user: userName, time: 'الآن', type: 'info' }
   ])
 
-  // مزامنة الصفوف المحدثة القادمة من page.tsx
+  // تحديث الصفوف عند جلبها من صفحة البداية
   useEffect(() => {
     setRows(initialRows)
   }, [initialRows])
 
-  // جلب المطالبات المسجلة في Supabase
+  // جلب المطالبات من جدول claims
   useEffect(() => {
     const fetchClaims = async () => {
       try {
@@ -286,7 +284,7 @@ export function Dashboard({
     }, 800)
   }
 
-  // حفظ المخالفة والتأكد من نجاح الإدخال في Supabase
+  // حفظ المخالفة في Supabase مباشرة
   const handleSubmitPenalty = async (e: React.FormEvent) => {
     e.preventDefault();
     const penaltyAmount = parseFloat(formData.amount) || 0;
@@ -306,8 +304,8 @@ export function Dashboard({
     const { error } = await supabase.from('penalties').insert([payload]);
 
     if (error) {
-      console.error('خطأ أثناء حفظ المخالفة في Supabase:', error.message);
-      showToast(`تعذر الحفظ في قاعدة البيانات: ${error.message}`, 'error');
+      console.error('خطأ Supabase أثناء الإدخال:', error.message);
+      showToast(`خطأ في الحفظ: ${error.message}`, 'error');
       return;
     }
 
@@ -330,7 +328,7 @@ export function Dashboard({
     setAuditLogs(prev => [{ id: Date.now(), action: `تسجيل مخالفة جديدة بقيمة ${formData.amount} رس لفرع ${formData.branch}`, user: userName, time: 'الآن', type: 'info' }, ...prev]);
   }
 
-  // حفظ المطالبة والتأكد من نجاح الإدخال في Supabase
+  // حفظ المطالبة في Supabase مباشرة
   const handleSubmitClaim = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -344,8 +342,8 @@ export function Dashboard({
     }]).select();
 
     if (error) {
-      console.error('خطأ أثناء حفظ المطالبة في Supabase:', error.message);
-      showToast(`تعذر حفظ المطالبة: ${error.message}`, 'error');
+      console.error('خطأ Supabase أثناء حفظ المطالبة:', error.message);
+      showToast(`خطأ في حفظ المطالبة: ${error.message}`, 'error');
       return;
     }
 
