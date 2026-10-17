@@ -156,6 +156,12 @@ export default function Page() {
     )
   }
 
-  // إذا كان المستخدم مسجلاً، تعرض لوحة التحكم مباشرة
-  return <Dashboard rows={rows} source={source} />
+  // إذا كان المستخدم مسجلاً، تعرض لوحة التحكم وتمرر صلاحيته المحددة في Supabase
+  return (
+    <Dashboard 
+      rows={rows} 
+      source={source} 
+      initialRole={session?.user?.user_metadata?.role || 'SUPERVISOR'} 
+    />
+  )
 }
