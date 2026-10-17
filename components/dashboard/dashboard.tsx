@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
 import { AlertCircle, Database, Truck, LayoutDashboard, AlertTriangle, FileText, Store, LogOut, Plus, Download, Printer, X, Globe, Link as LinkIcon, MapPin, CheckCircle, Moon, Sun, ShieldCheck, TrendingUp, ArrowUpRight, Bell, Filter, Clock, Shield, Sparkles, History, FileDown, Award, Users } from 'lucide-react'
 import type { DataSource, Penalty } from '@/lib/penalties'
+import { supabase } from '@/lib/supabase'
 import { BranchFilter, ALL_BRANCHES } from './branch-filter'
 import { AppSummary } from './app-summary'
 import { KpiCards } from './kpi-cards'
@@ -16,16 +17,16 @@ const dict = {
     penalties: 'المخالفات', claims: 'المطالبات', restaurants: 'المطاعم والفروع', auditLog: 'سجل التدقيق',
     teamLeaderboard: 'أداء الفريق', userName: 'أحمد جمال', logout: 'تسجيل الخروج', switchLang: 'English',
     overview: 'نظرة عامة على العمليات', managePenalties: 'إدارة المخالفات', claimsHistory: 'سجل المطالبات',
-    restaurantsGuide: 'دليل الأداء والفروع', connected: 'متصل بنظام التشغيل المحلي', records: 'سجل نشط',
+    restaurantsGuide: 'دليل الأداء والفروع', connected: 'متصل بنظام التشغيل وقاعدة البيانات', records: 'سجل نشط',
     addPenalty: 'تسجيل مخالفة', exportExcel: 'تصدير إكسيل', printReport: 'طباعة تقرير PDF', downloadPdf: 'تحميل ملف PDF',
     addNewPenalty: 'تسجيل مخالفة جديدة', app: 'التطبيق', restaurantName: 'اسم المطعم', brand: 'البراند', branch: 'الفرع',
     orderNumber: 'رقم الطلب', amount: 'مبلغ المخالفة (رس)', refundedAmount: 'المبلغ المسترد (رس)', reason: 'سبب المخالفة', status: 'الحالة',
     cancel: 'إلغاء', save: 'حفظ في النظام', selectApp: 'اختر التطبيق...', 
     underReview: 'قيد المراجعة', rejected: 'مرفوضة', refunded: 'تم الاسترداد', missingImage: 'بدون صورة',
-    successMsg: 'تم تسجيل المخالفة بنجاح وعرضها في الداشبورد!', headers: ['التاريخ', 'التطبيق', 'اسم المطعم', 'البراند', 'الفرع', 'رقم الطلب', 'المبلغ', 'السبب', 'الحالة'],
+    successMsg: 'تم حفظ المخالفة بنجاح في قاعدة البيانات!', headers: ['التاريخ', 'التطبيق', 'اسم المطعم', 'البراند', 'الفرع', 'رقم الطلب', 'المبلغ', 'السبب', 'الحالة'],
     claimFormTitle: 'تقديم مطالبة جديدة', claimOrderNumber: 'رقم الطلب', claimStatus: 'حالة المطالبة',
     claimRejectionReason: 'سبب الرفض (إن وجد)', claimEvidence: 'رابط الإثبات', saveClaim: 'حفظ المطالبة',
-    claimSuccess: 'تم تسجيل المطالبة بنجاح!',
+    claimSuccess: 'تم حفظ المطالبة بنجاح في قاعدة البيانات!',
     restaurantsGuideDesc: 'تحليل شامل لأداء الفروع، حجم الغرامات، ونسب التأثير التشغيلي.',
     branchesCount: 'فروع نشطة', totalFines: 'إجمالي الغرامات', penaltiesCount: 'مخالفات مسجلة',
     recoveryTitle: 'حاسبة كفاءة واسترداد الأرباح', recoverySubtitle: 'متابعة المبالغ المستردة مقابل إجمالي الغرامات المخصومة لحظياً',
@@ -45,16 +46,16 @@ const dict = {
     penalties: 'Penalties', claims: 'Claims', restaurants: 'Restaurants', auditLog: 'Audit Log',
     teamLeaderboard: 'Team Performance', userName: 'Ahmed Gamal', logout: 'Log Out', switchLang: 'العربية',
     overview: 'Operations Overview', managePenalties: 'Penalties Log', claimsHistory: 'Claims Management',
-    restaurantsGuide: 'Branches & Performance', connected: 'Local System Connected', records: 'active records',
+    restaurantsGuide: 'Branches & Performance', connected: 'Database Connected', records: 'active records',
     addPenalty: 'Log Penalty', exportExcel: 'Export Excel', printReport: 'Print PDF Report', downloadPdf: 'Download PDF',
     addNewPenalty: 'Add New Penalty', app: 'App', restaurantName: 'Restaurant', brand: 'Brand', branch: 'Branch',
     orderNumber: 'Order Number', amount: 'Amount (SAR)', refundedAmount: 'Refunded (SAR)', reason: 'Reason', status: 'Status',
     cancel: 'Cancel', save: 'Save Record', selectApp: 'Select App...', 
     underReview: 'Under Review', rejected: 'Rejected', refunded: 'Refunded', missingImage: 'Missing Image',
-    successMsg: 'Penalty saved and displayed successfully!', headers: ['Date', 'App', 'Restaurant', 'Brand', 'Branch', 'Order No', 'Amount', 'Reason', 'Status'],
+    successMsg: 'Penalty saved successfully in Supabase!', headers: ['Date', 'App', 'Restaurant', 'Brand', 'Branch', 'Order No', 'Amount', 'Reason', 'Status'],
     claimFormTitle: 'Submit New Claim', claimOrderNumber: 'Order Number', claimStatus: 'Claim Status',
     claimRejectionReason: 'Rejection Reason', claimEvidence: 'Evidence Link', saveClaim: 'Save Claim',
-    claimSuccess: 'Claim saved successfully!',
+    claimSuccess: 'Claim saved successfully in Supabase!',
     restaurantsGuideDesc: 'Comprehensive analysis of branch performance, fine volume, and operational impact.',
     branchesCount: 'Active Branches', totalFines: 'Total Fines', penaltiesCount: 'Recorded Penalties',
     recoveryTitle: 'Recovery & Profit Efficiency Calculator', recoverySubtitle: 'Real-time tracking of refunded amounts vs total deducted fines',
@@ -86,6 +87,7 @@ export function Dashboard({
   const t = dict[lang] 
   
   const [rows, setRows] = useState<Penalty[]>(initialRows)
+  const [dbClaims, setDbClaims] = useState<any[]>([])
   const [isDark, setIsDark] = useState(false)
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [userRole] = useState<'MANAGER' | 'SUPERVISOR'>(initialRole)
@@ -100,6 +102,24 @@ export function Dashboard({
     { id: 2, action: 'تحديث حالة المطالبة إلى قيد المراجعة', user: userName, time: 'منذ 4 ساعات', type: 'warning' },
     { id: 3, action: 'تصدير التقرير التنفيذي بصيغة CSV', user: userName, time: 'أمس', type: 'success' }
   ])
+
+  // مزامنة الصفوف المحدثة القادمة من page.tsx
+  useEffect(() => {
+    setRows(initialRows)
+  }, [initialRows])
+
+  // جلب المطالبات المسجلة في Supabase
+  useEffect(() => {
+    const fetchClaims = async () => {
+      try {
+        const { data } = await supabase.from('claims').select('*').order('id', { ascending: false })
+        if (data) setDbClaims(data)
+      } catch (err) {
+        console.error('Error fetching claims:', err)
+      }
+    }
+    fetchClaims()
+  }, [])
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme')
@@ -204,8 +224,16 @@ export function Dashboard({
   }, [filteredByBranch])
 
   const claimsList = useMemo(() => {
-    return filteredByBranch.filter(r => (r as any).rejectionReason || (r as any).evidenceLink || r.status === t.rejected || r.status === t.refunded || r.status === t.missingImage)
-  }, [filteredByBranch, t])
+    const fromPenalties = filteredByBranch.filter(r => (r as any).rejectionReason || (r as any).evidenceLink || r.status === t.rejected || r.status === t.refunded || r.status === t.missingImage)
+    const fromDb = dbClaims.map(c => ({
+      orderNumber: c.order_number,
+      branch: c.branch || '—',
+      rejectionReason: c.rejection_reason,
+      evidenceLink: c.evidence_link,
+      status: c.status
+    }))
+    return [...fromDb, ...fromPenalties]
+  }, [filteredByBranch, dbClaims, t])
 
   const restaurantStats = useMemo(() => {
     const stats: Record<string, { name: string; branches: Set<string>; totalAmount: number; penaltyCount: number }> = {}
@@ -258,14 +286,37 @@ export function Dashboard({
     }, 800)
   }
 
-  const handleSubmitPenalty = (e: React.FormEvent) => {
+  // حفظ المخالفة والتأكد من نجاح الإدخال في Supabase
+  const handleSubmitPenalty = async (e: React.FormEvent) => {
     e.preventDefault();
+    const penaltyAmount = parseFloat(formData.amount) || 0;
+
+    const payload = {
+      app: formData.app,
+      restaurant_name: formData.restaurantName,
+      brand: formData.brand,
+      branch: formData.branch,
+      order_number: formData.orderNumber,
+      amount: penaltyAmount,
+      reason: formData.reason,
+      status: formData.status,
+      created_by: userName
+    };
+
+    const { error } = await supabase.from('penalties').insert([payload]);
+
+    if (error) {
+      console.error('خطأ أثناء حفظ المخالفة في Supabase:', error.message);
+      showToast(`تعذر الحفظ في قاعدة البيانات: ${error.message}`, 'error');
+      return;
+    }
+
     const newPenalty: Penalty = {
       date: new Date().toISOString(),
       app: formData.app,
       branch: formData.branch,
       orderNumber: formData.orderNumber,
-      amount: parseFloat(formData.amount) || 0,
+      amount: penaltyAmount,
       reason: formData.reason,
       status: formData.status,
       restaurantName: formData.restaurantName,
@@ -279,8 +330,29 @@ export function Dashboard({
     setAuditLogs(prev => [{ id: Date.now(), action: `تسجيل مخالفة جديدة بقيمة ${formData.amount} رس لفرع ${formData.branch}`, user: userName, time: 'الآن', type: 'info' }, ...prev]);
   }
 
-  const handleSubmitClaim = (e: React.FormEvent) => {
+  // حفظ المطالبة والتأكد من نجاح الإدخال في Supabase
+  const handleSubmitClaim = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const { data, error } = await supabase.from('claims').insert([{
+      order_number: claimData.orderNumber,
+      branch: branch !== ALL_BRANCHES ? branch : 'الكل',
+      status: claimData.status,
+      rejection_reason: claimData.rejectionReason,
+      evidence_link: claimData.evidenceLink,
+      created_by: userName
+    }]).select();
+
+    if (error) {
+      console.error('خطأ أثناء حفظ المطالبة في Supabase:', error.message);
+      showToast(`تعذر حفظ المطالبة: ${error.message}`, 'error');
+      return;
+    }
+
+    if (data && data[0]) {
+      setDbClaims(prev => [data[0], ...prev]);
+    }
+
     showToast(t.claimSuccess, 'success');
     setClaimData({ orderNumber: '', status: t.rejected, rejectionReason: '', evidenceLink: '' });
     setAuditLogs(prev => [{ id: Date.now(), action: `تقديم مطالبة جديدة للطلب ${claimData.orderNumber}`, user: userName, time: 'الآن', type: 'warning' }, ...prev]);
