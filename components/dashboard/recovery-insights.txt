@@ -1,0 +1,81 @@
+'use client'
+
+import { useMemo } from 'react'
+import type { Penalty } from '@/lib/penalties'
+import { TrendingUp, ShieldCheck, DollarSign, ArrowUpRight } from 'lucide-react'
+
+export function RecoveryInsights({ rows }: { rows: Penalty[] }) {
+  // حساب إجمالي الغرامات والمبالغ المستردة
+  const { totalFines, totalRefunded, recoveryRate } = useMemo(() => {
+    let fines = 0
+    let refunded = 0
+
+    rows.forEach(r => {
+      const amount = Number(r.amount) || 0
+      fines += amount
+      // إذا كانت الحالة تم الاسترداد، نحسب المبلغ ضمن المسترد
+      if (r.status === 'تم الاسترداد' || r.status === 'Refunded') {
+        refunded += amount
+      }
+    })
+
+    const rate = fines > 0 ? Math.round((refunded / fines) * 100) : 0
+    return { totalFines: fines, totalRefunded: refunded, recoveryRate: rate }
+  }, [rows])
+
+  return (
+    <div className="bg-white/90 dark:bg-[#0a0f1d]/90 backdrop-blur-2xl p-8 rounded-[2rem] border border-slate-200/80 dark:border-white/10 shadow-2xl transition-all relative overflow-hidden">
+      {/* تأثير إضاءة خلفية خفيف */}
+      <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div className="flex items-center justify-between mb-8 relative z-10">
+        <div>
+          <h3 className="text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-3">
+            <span className="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-500">
+              <ShieldCheck className="size-6" />
+            </span>
+            حاسبة كفاءة واسترداد الأرباح
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">متابعة المبالغ المستردة مقابل إجمالي الغرامات المخصومة لحظياً</p>
+        </div>
+        <div className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 text-emerald-500 text-xs font-bold border border-emerald-500/20">
+          <TrendingUp className="size-4" /> معدل الأداء التشغيلي
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
+        {/* إجمالي الغرامات */}
+        <div className="bg-slate-50 dark:bg-[#060913] p-6 rounded-2xl border border-slate-100 dark:border-white/10 flex flex-col justify-between">
+          <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">إجمالي الغرامات المخصومة</span>
+          <div className="mt-4 flex items-baseline gap-2">
+            <span className="text-3xl font-extrabold text-slate-900 dark:text-white font-mono">{totalFines.toLocaleString()}</span>
+            <span className="text-sm font-semibold text-slate-400">رس</span>
+          </div>
+          <span className="text-xs text-slate-400 mt-2">من {rows.length} مخالفة مسجلة</span>
+        </div>
+
+        {/* إجمالي المسترد */}
+        <div className="bg-slate-50 dark:bg-[#060913] p-6 rounded-2xl border border-slate-100 dark:border-white/10 flex flex-col justify-between">
+          <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">إجمالي المبالغ المستردة</span>
+          <div className="mt-4 flex items-baseline gap-2">
+            <span className="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">{totalRefunded.toLocaleString()}</span>
+            <span className="text-sm font-semibold text-slate-400">رس</span>
+          </div>
+          <span className="text-xs text-emerald-500/80 mt-2 font-medium">تم استرجاعها بنجاح إلى المحفظة</span>
+        </div>
+
+        {/* نسبة النجاح */}
+        <div className="bg-slate-50 dark:bg-[#060913] p-6 rounded-2xl border border-slate-100 dark:border-white/10 flex flex-col justify-between">
+          <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">نسبة نجاح الاسترداد</span>
+          <div className="mt-4 flex items-baseline gap-2">
+            <span className="text-3xl font-extrabold text-blue-600 dark:text-blue-400 font-mono">{recoveryRate}%</span>
+            <ArrowUpRight className="size-5 text-blue-500" />
+          </div>
+          <div className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden mt-3">
+            <div className="h-full bg-gradient-to-r from-blue-600 to-emerald-500 rounded-full transition-all duration-500" style={{ width: `${Math.min(recoveryRate, 100)}%` }}></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
