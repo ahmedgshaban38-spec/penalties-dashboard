@@ -170,11 +170,23 @@ export function Dashboard({
     evidenceLink: '' 
   })
 
-  const branches = useMemo(() => [...new Set(rows.map((r) => r.branch))].sort((a, b) => a.localeCompare(b, lang === 'ar' ? 'ar' : 'en')), [rows, lang])
+  // استخراج أسماء المطاعم للفلتر العلوي بدلاً من الفروع الفردية
+  const branches = useMemo(() => {
+    const names = rows
+      .map((r) => String((r as any).restaurantName || (r as any).restaurant_name || (r as any).brand || r.branch || '').trim())
+      .filter(Boolean)
+    return [...new Set(names)].sort((a, b) => a.localeCompare(b, lang === 'ar' ? 'ar' : 'en'))
+  }, [rows, lang])
   
+  // فلترة البيانات لتجلب كل الفروع والبراندات التابعة للمطعم المختار
   const filteredByBranch = useMemo(() => {
-    if (branch === ALL_BRANCHES) return rows
-    return rows.filter((r) => r.branch === branch || (r as any).restaurantName === branch || (r as any).brand === branch)
+    if (branch === ALL_BRANCHES || branch === 'جميع المطاعم' || branch === 'جميع الفروع والمطاعم') return rows
+    return rows.filter((r) => {
+      const restName = String((r as any).restaurantName || (r as any).restaurant_name || '').trim()
+      const brandName = String((r as any).brand || '').trim()
+      const branchName = String(r.branch || '').trim()
+      return restName === branch || brandName === branch || branchName === branch
+    })
   }, [rows, branch])
 
   const filtered = useMemo(() => {
@@ -253,7 +265,7 @@ export function Dashboard({
   const restaurantStats = useMemo(() => {
     const stats: Record<string, { name: string; branches: Set<string>; totalAmount: number; penaltyCount: number }> = {}
     filteredByBranch.forEach(r => {
-      const name = (r as any).restaurantName || (r as any).brand || r.branch || 'غير محدد'
+      const name = (r as any).restaurantName || (r as any).restaurant_name || (r as any).brand || r.branch || 'غير محدد'
       if (!stats[name]) stats[name] = { name, branches: new Set(), totalAmount: 0, penaltyCount: 0 }
       if (r.branch) stats[name].branches.add(r.branch)
       stats[name].totalAmount += r.amount || 0
@@ -444,7 +456,7 @@ export function Dashboard({
           </div>
           <div className="text-left">
             <p className="text-sm font-bold">{t.printDate} {new Date().toLocaleDateString()}</p>
-            <p className="text-xs text-gray-500 mt-1">الفرع: {branch}</p>
+            <p className="text-xs text-gray-500 mt-1">المطعم: {branch}</p>
           </div>
         </div>
 
@@ -868,7 +880,7 @@ export function Dashboard({
                     <div className="p-6 border-b border-slate-100 dark:border-white/10 bg-slate-50/50 dark:bg-white/5"><h3 className="text-lg font-bold text-slate-900 dark:text-white">سجل المطالبات الحالي</h3></div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm text-right">
-                        <thead><tr className="border-b border-slate-100 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 text-slate-500 dark:text-slate-400"><th className="px-6 py-5 font-bold">رقم الطلب</th><th className="px-6 py-5 font-bold">الفرع</th><th className="px-6 py-5 font-bold">سبب الرفض</th><th className="px-6 py-5 font-bold">الإثبات</th><th className="px-6 py-5 font-bold">حالة المطالبة</th></tr></thead>
+                        <thead><tr className="border-b border-slate-100 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 text-slate-500 dark:text-slate-400"><th className="px-6 py-5 font-bold">رقم الطلب</th><th className="px-6 py-5 font-bold">الفرع / المطعم</th><th className="px-6 py-5 font-bold">سبب الرفض</th><th className="px-6 py-5 font-bold">الإثبات</th><th className="px-6 py-5 font-bold">حالة المطالبة</th></tr></thead>
                         <tbody>
                           {claimsList.length === 0 ? (<tr><td colSpan={5} className="px-6 py-16 text-center text-slate-400 font-medium">لا توجد مطالبات مسجلة حتى الآن</td></tr>) : (
                             claimsList.map((r, i) => (
