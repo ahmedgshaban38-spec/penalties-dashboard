@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, useEffect, useRef } from 'react'
-import { AlertCircle, Database, Truck, LayoutDashboard, AlertTriangle, FileText, Store, LogOut, Plus, Download, Printer, X, Globe, Link as LinkIcon, MapPin, CheckCircle, Moon, Sun, ShieldCheck, TrendingUp, ArrowUpRight, Bell, Filter, Clock, Shield, Sparkles, History, FileDown, Award, Users, Upload, Image as ImageIcon, Loader2 } from 'lucide-react'
+import { AlertCircle, Database, Truck, LayoutDashboard, AlertTriangle, FileText, Store, LogOut, Plus, Download, Printer, X, Globe, MapPin, CheckCircle, Moon, Sun, ShieldCheck, ArrowUpRight, Bell, Filter, Clock, Sparkles, History, FileDown, Award, Copy, Check } from 'lucide-react'
 import type { DataSource, Penalty } from '@/lib/penalties'
 import { supabase } from '@/lib/supabase'
 import { BranchFilter, ALL_BRANCHES } from './branch-filter'
@@ -14,59 +14,51 @@ import { PenaltiesTable } from './penalties-table'
 const dict = {
   ar: {
     sidebarTitle: 'إدارة المطالبات', sidebarSubtitle: 'نظام العمليات المتقدم', dashboard: 'لوحة التحكم',
-    penalties: 'المخالفات', claims: 'المطالبات', restaurants: 'المطاعم والفروع', auditLog: 'سجل التدقيق',
+    penalties: 'المخالفات', claims: 'صانع الاعتراضات الذكي', restaurants: 'المطاعم والفروع', auditLog: 'سجل التدقيق',
     teamLeaderboard: 'أداء الفريق', userName: 'أحمد جمال', logout: 'تسجيل الخروج', switchLang: 'English',
-    overview: 'نظرة عامة على العمليات', managePenalties: 'إدارة المخالفات', claimsHistory: 'سجل المطالبات',
+    overview: 'نظرة عامة على العمليات', managePenalties: 'إدارة المخالفات والاعتراضات', claimsHistory: 'صانع الاعتراضات الذكي (AI)',
     restaurantsGuide: 'دليل الأداء والفروع', connected: 'قاعدة بيانات Supabase متصلة', records: 'سجل محفوظ',
     addPenalty: 'تسجيل مخالفة', exportExcel: 'تصدير إكسيل', printReport: 'طباعة تقرير PDF', downloadPdf: 'تحميل ملف PDF',
     addNewPenalty: 'تسجيل مخالفة جديدة', app: 'التطبيق', restaurantName: 'اسم المطعم', brand: 'البراند', branch: 'الفرع',
-    orderNumber: 'رقم الطلب', amount: 'مبلغ المخالفة (رس)', refundedAmount: 'المبلغ المسترد (رس)', reason: 'سبب المخالفة', status: 'الحالة',
+    orderNumber: 'رقم الطلب', orderStatus: 'حالة الطلب', amount: 'مبلغ المخالفة (رس)', reason: 'سبب المخالفة', status: 'حالة الاعتراض',
     cancel: 'إلغاء', save: 'حفظ في النظام', selectApp: 'اختر التطبيق...', 
-    underReview: 'قيد المراجعة', rejected: 'مرفوضة', refunded: 'تم الاسترداد', missingImage: 'بدون صورة',
-    successMsg: 'تم حفظ المخالفة بنجاح بحالة (قيد المراجعة)!', headers: ['التاريخ', 'التطبيق', 'اسم المطعم', 'البراند', 'الفرع', 'رقم الطلب', 'المبلغ', 'السبب', 'الحالة'],
-    claimFormTitle: 'تحديث حالة المطالبة وحسم النزاع', claimOrderNumber: 'رقم الطلب المراد حسمه', claimStatus: 'النتيجة النهائية للمطالبة',
-    claimRejectionReason: 'سبب الرفض (إن وجد)', claimEvidence: 'صورة الإثبات أو الفاتورة', saveClaim: 'حسم وتحديث حالة المخالفة',
-    claimSuccess: 'تم حسم المطالبة وتحديث حالة المخالفة بنجاح في النظام!',
+    underReview: 'قيد المراجعة', rejected: 'مرفوضة', refunded: 'تم الاسترداد', missingImage: 'لم يتم إرسال صورة للتحقق',
+    successMsg: 'تم حفظ المخالفة بنجاح!', headers: ['التاريخ', 'التطبيق', 'اسم المطعم', 'البراند', 'الفرع', 'رقم الطلب', 'حالة الطلب', 'المبلغ', 'السبب', 'حالة الاعتراض', 'سبب الرفض'],
     restaurantsGuideDesc: 'تحليل شامل لأداء الفروع، حجم الغرامات، ونسب التأثير التشغيلي.',
     branchesCount: 'فروع نشطة', totalFines: 'إجمالي الغرامات', penaltiesCount: 'مخالفات مسجلة',
     recoveryTitle: 'حاسبة كفاءة واسترداد الأرباح', recoverySubtitle: 'متابعة المبالغ المستردة مقابل إجمالي الغرامات المخصومة لحظياً',
     totalFinesLabel: 'إجمالي الغرامات المخصومة', totalRefundedLabel: 'إجمالي المبالغ المستردة', recoveryRateLabel: 'نسبة نجاح الاسترداد',
     branchAnalysis: 'تحليل الغرامات حسب الفروع', topReasons: 'أكثر الغرامات انتشاراً وأسبابها',
     alertTitle: 'تنبيه تشغيلي عاجل', alertDesc: 'لديك حالات قيد المراجعة تتطلب متابعة مستمرة لضمان الاسترداد.',
-    allStatus: 'الكل', filterReview: 'قيد المراجعة', filterRefunded: 'المستردة', filterRejected: 'المرفوضة',
+    allStatus: 'الكل', filterReview: 'قيد المراجعة', filterRefunded: 'تم الاسترداد', filterRejected: 'مرفوضة', filterMissingImg: 'لم يتم إرسال صورة للتحقق',
     printHeaderTitle: 'التقرير التنفيذي لإدارة الغرامات والمطالبات', printDate: 'تاريخ التقرير:',
     slaWarning: 'مؤشر مهل الاعتراض الحرجة',
     roleManager: 'مدير العمليات (صلاحية كاملة)', roleSupervisor: 'مشرف الفرع (صلاحية إدخال)',
-    aiAssistantTitle: 'المساعد الذكي لصياغة الاعتراضات (AI)', generateAiText: 'توليد مسودة اعتراض رسمية',
     auditLogTitle: 'سجل التدقيق والمتابعة التاريخية', auditDesc: 'متابعة لحظية لكافة العمليات والتعديلات المسجلة في النظام',
     leaderboardTitle: 'لوحة شرف أداء المشرفين ومعدل الاسترداد'
   },
   en: {
     sidebarTitle: 'Claims Ops', sidebarSubtitle: 'Enterprise Engine', dashboard: 'Dashboard',
-    penalties: 'Penalties', claims: 'Claims', restaurants: 'Restaurants', auditLog: 'Audit Log',
+    penalties: 'Penalties', claims: 'Smart AI Objector', restaurants: 'Restaurants', auditLog: 'Audit Log',
     teamLeaderboard: 'Team Performance', userName: 'Ahmed Gamal', logout: 'Log Out', switchLang: 'العربية',
-    overview: 'Operations Overview', managePenalties: 'Penalties Log', claimsHistory: 'Claims Management',
+    overview: 'Operations Overview', managePenalties: 'Penalties & Claims Log', claimsHistory: 'Smart AI Objection Generator',
     restaurantsGuide: 'Branches & Performance', connected: 'Database Connected', records: 'records',
     addPenalty: 'Log Penalty', exportExcel: 'Export Excel', printReport: 'Print PDF Report', downloadPdf: 'Download PDF',
     addNewPenalty: 'Add New Penalty', app: 'App', restaurantName: 'Restaurant', brand: 'Brand', branch: 'Branch',
-    orderNumber: 'Order Number', amount: 'Amount (SAR)', refundedAmount: 'Refunded (SAR)', reason: 'Reason', status: 'Status',
+    orderNumber: 'Order Number', orderStatus: 'Order Status', amount: 'Amount (SAR)', reason: 'Reason', status: 'Claim Status',
     cancel: 'Cancel', save: 'Save Record', selectApp: 'Select App...', 
-    underReview: 'Under Review', rejected: 'Rejected', refunded: 'Refunded', missingImage: 'Missing Image',
-    successMsg: 'Penalty saved successfully with Under Review status!', headers: ['Date', 'App', 'Restaurant', 'Brand', 'Branch', 'Order No', 'Amount', 'Reason', 'Status'],
-    claimFormTitle: 'Update Claim & Settle Penalty Status', claimOrderNumber: 'Order Number to Settle', claimStatus: 'Final Claim Decision',
-    claimRejectionReason: 'Rejection Reason', claimEvidence: 'Evidence or Receipt Image', saveClaim: 'Settle & Sync Penalty',
-    claimSuccess: 'Claim settled and penalty status updated successfully!',
+    underReview: 'Under Review', rejected: 'Rejected', refunded: 'Refunded', missingImage: 'No Verification Image Sent',
+    successMsg: 'Penalty saved successfully!', headers: ['Date', 'App', 'Restaurant', 'Brand', 'Branch', 'Order No', 'Order Status', 'Amount', 'Reason', 'Status', 'Rejection Reason'],
     restaurantsGuideDesc: 'Comprehensive analysis of branch performance, fine volume, and operational impact.',
     branchesCount: 'Active Branches', totalFines: 'Total Fines', penaltiesCount: 'Recorded Penalties',
     recoveryTitle: 'Recovery & Profit Efficiency Calculator', recoverySubtitle: 'Real-time tracking of refunded amounts vs total deducted fines',
     totalFinesLabel: 'Total Deducted Fines', totalRefundedLabel: 'Total Refunded Amount', recoveryRateLabel: 'Recovery Success Rate',
     branchAnalysis: 'Branch Penalties Analysis', topReasons: 'Top Frequent Penalty Reasons',
     alertTitle: 'Urgent Operational Alert', alertDesc: 'You have pending review cases requiring continuous follow-up for recovery.',
-    allStatus: 'All', filterReview: 'Under Review', filterRefunded: 'Refunded', filterRejected: 'Rejected',
+    allStatus: 'All', filterReview: 'Under Review', filterRefunded: 'Refunded', filterRejected: 'Rejected', filterMissingImg: 'No Image Sent',
     printHeaderTitle: 'Executive Penalties & Claims Report', printDate: 'Report Date:',
     slaWarning: 'Critical SLA Objection Deadlines',
     roleManager: 'Operations Manager (Full Access)', roleSupervisor: 'Branch Supervisor (Input Access)',
-    aiAssistantTitle: 'AI Objection Assistant', generateAiText: 'Generate Formal Objection Draft',
     auditLogTitle: 'Activity Audit Trail', auditDesc: 'Real-time tracking of all operations and records updates in the system',
     leaderboardTitle: 'Supervisors Performance & Recovery Leaderboard'
   }
@@ -87,15 +79,22 @@ export function Dashboard({
   const t = dict[lang] 
   
   const [rows, setRows] = useState<Penalty[]>(initialRows)
-  const [dbClaims, setDbClaims] = useState<any[]>([])
   const [isDark, setIsDark] = useState(false)
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [userRole] = useState<'MANAGER' | 'SUPERVISOR'>(initialRole)
   
+  // حالات صانع الاعتراضات الذكي
+  const [aiForm, setAiForm] = useState({
+    orderNumber: '',
+    app: 'هنقرستيشن',
+    orderStatus: 'تم التوصيل',
+    reason: ''
+  })
   const [aiDraft, setAiDraft] = useState('')
   const [isGeneratingAi, setIsGeneratingAi] = useState(false)
+  const [copied, setCopied] = useState(false)
+
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false)
-  const [isUploadingImage, setIsUploadingImage] = useState(false)
   const reportRef = useRef<HTMLDivElement>(null)
 
   const [auditLogs, setAuditLogs] = useState<Array<{ id: number; action: string; user: string; time: string; type: 'success' | 'info' | 'warning' }>>([
@@ -105,18 +104,6 @@ export function Dashboard({
   useEffect(() => {
     setRows(initialRows)
   }, [initialRows])
-
-  useEffect(() => {
-    const fetchClaims = async () => {
-      try {
-        const { data } = await supabase.from('claims').select('*').order('id', { ascending: false })
-        if (data) setDbClaims(data)
-      } catch (err) {
-        console.error('Error fetching claims:', err)
-      }
-    }
-    fetchClaims()
-  }, [])
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme')
@@ -149,28 +136,19 @@ export function Dashboard({
     setTimeout(() => setToast(current => current?.id === id ? null : current), 3500)
   }
   
-  // حالة المخالفة الجديدة مثبتة دائماً على (قيد المراجعة) لمنع التلاعب
   const [formData, setFormData] = useState({ 
     app: '', 
     restaurantName: '', 
     brand: '', 
     branch: '', 
     orderNumber: '', 
+    orderStatus: 'تم التوصيل',
     amount: '', 
-    refundedAmount: '', 
     reason: '', 
     status: t.underReview 
   })
 
-  // بيانات المطالبة: الافتراضي تم الاسترداد
-  const [claimData, setClaimData] = useState({ 
-    orderNumber: '', 
-    status: t.refunded, 
-    rejectionReason: '', 
-    evidenceLink: '' 
-  })
-
-  // استخراج أسماء المطاعم للفلتر العلوي بدلاً من الفروع الفردية
+  // استخراج أسماء المطاعم للفلتر العلوي
   const branches = useMemo(() => {
     const names = rows
       .map((r) => String((r as any).restaurantName || (r as any).restaurant_name || (r as any).brand || r.branch || '').trim())
@@ -195,24 +173,25 @@ export function Dashboard({
       date: r.date ? new Date(r.date).toISOString().split('T')[0] : r.date
     }))
     if (statusFilter === 'ALL') return list
-    if (statusFilter === 'REVIEW') return list.filter(r => r.status === t.underReview)
-    if (statusFilter === 'REFUNDED') return list.filter(r => r.status === t.refunded)
-    if (statusFilter === 'REJECTED') return list.filter(r => r.status === t.rejected || r.status === t.missingImage)
+    if (statusFilter === 'REVIEW') return list.filter(r => r.status === 'قيد المراجعة' || r.status === 'Under Review')
+    if (statusFilter === 'REFUNDED') return list.filter(r => r.status === 'تم الاسترداد' || r.status === 'Refunded')
+    if (statusFilter === 'REJECTED') return list.filter(r => r.status === 'مرفوضة' || r.status === 'Rejected')
+    if (statusFilter === 'MISSING_IMAGE') return list.filter(r => r.status === 'لم يتم إرسال صورة للتحقق' || r.status === 'بدون صورة' || r.status === 'Missing Image')
     return list
-  }, [filteredByBranch, statusFilter, t])
+  }, [filteredByBranch, statusFilter])
 
-  const reviewCount = useMemo(() => filteredByBranch.filter(r => r.status === t.underReview).length, [filteredByBranch, t])
+  const reviewCount = useMemo(() => filteredByBranch.filter(r => r.status === 'قيد المراجعة' || r.status === 'Under Review').length, [filteredByBranch])
 
   const slaAlerts = useMemo(() => {
     const now = new Date().getTime()
     return filteredByBranch.filter(r => {
-      if (r.status !== t.underReview) return false
+      if (r.status !== 'قيد المراجعة' && r.status !== 'Under Review') return false
       if (!r.date) return false
       const penaltyDate = new Date(r.date).getTime()
       const diffDays = Math.floor((now - penaltyDate) / (1000 * 60 * 60 * 24))
       return diffDays >= 3
     })
-  }, [filteredByBranch, t])
+  }, [filteredByBranch])
 
   const { totalFines, totalRefunded, recoveryRate } = useMemo(() => {
     let fines = 0
@@ -250,18 +229,6 @@ export function Dashboard({
     return Object.entries(stats).sort((a, b) => b[1].count - a[1].count).slice(0, 5)
   }, [filteredByBranch])
 
-  const claimsList = useMemo(() => {
-    const fromPenalties = filteredByBranch.filter(r => (r as any).rejectionReason || (r as any).evidenceLink || r.status === t.rejected || r.status === t.refunded || r.status === t.missingImage)
-    const fromDb = dbClaims.map(c => ({
-      orderNumber: c.order_number,
-      branch: c.branch || '—',
-      rejectionReason: c.rejection_reason,
-      evidenceLink: c.evidence_link,
-      status: c.status
-    }))
-    return [...fromDb, ...fromPenalties]
-  }, [filteredByBranch, dbClaims, t])
-
   const restaurantStats = useMemo(() => {
     const stats: Record<string, { name: string; branches: Set<string>; totalAmount: number; penaltyCount: number }> = {}
     filteredByBranch.forEach(r => {
@@ -274,8 +241,20 @@ export function Dashboard({
     return Object.values(stats).map(s => ({ ...s, branchesCount: s.branches.size })).sort((a, b) => b.totalAmount - a.totalAmount)
   }, [filteredByBranch])
 
+  // تحديث الصف لحظياً من داخل جدول المخالفات
+  const handleUpdatePenaltyRow = (orderNo: string, updates: Partial<any>) => {
+    setRows(prev => prev.map(r => {
+      if (String(r.orderNumber).trim() === orderNo) {
+        return { ...r, ...updates }
+      }
+      return r
+    }))
+    showToast('تم تحديث بيانات المخالفة بنجاح!', 'success')
+    setAuditLogs(prev => [{ id: Date.now(), action: `تحديث بيانات الطلب رقم ${orderNo} في جدول المخالفات`, user: userName, time: 'الآن', type: 'info' }, ...prev])
+  }
+
   const handleExportExcel = () => {
-    const csvContent = filteredByBranch.map(row => `${row.date ? new Date(row.date).toISOString().split('T')[0] : ''},${row.app || ''},${(row as any).restaurantName || ''},${(row as any).brand || ''},${row.branch || ''},${row.orderNumber || ''},${row.amount || 0},${row.reason || ''},${row.status || ''}`);
+    const csvContent = filteredByBranch.map((row: any) => `${row.date ? new Date(row.date).toISOString().split('T')[0] : ''},${row.app || ''},${row.restaurantName || row.restaurant_name || ''},${row.brand || ''},${row.branch || ''},${row.orderNumber || ''},${row.orderStatus || row.order_status || 'تم التوصيل'},${row.amount || 0},${row.reason || ''},${row.status || ''},${row.rejectionReason || row.rejection_reason || ''}`);
     const csv = '\uFEFF' + [t.headers.join(','), ...csvContent].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `Penalties_Report.csv`; link.click();
@@ -303,44 +282,41 @@ export function Dashboard({
     }
   }
 
-  const handleGenerateAiObjection = () => {
+  // توليد صيغة اعتراض ذكية ومفصلة حسب السبب وحالة الطلب
+  const handleGenerateAiObjection = (e: React.FormEvent) => {
+    e.preventDefault()
     setIsGeneratingAi(true)
+    setCopied(false)
+
     setTimeout(() => {
-      setAiDraft(`السادة إدارة دعم منصة التوصيل المحترمين،\n\nنود إفادتكم بأن الغرامة المالية المسجلة على الطلب رقم (${claimData.orderNumber || 'غير محدد'}) غير مبررة، حيث أننا قمنا بمراجعة الكاميرات وسجلات المطبخ وتبين التزام الفرع بكافة معايير الجودة والتحضير في الوقت المحدد.\n\nلذا نرجو التكرم بإعادة مراجعة الحالة وإلغاء الخصم ورد المبلغ لصالح المحفظة في أقرب وقت.\n\nولكم جزيل الشكر،\nإدارة العمليات - ${userName}`)
+      const orderNo = aiForm.orderNumber.trim() || 'المذكور'
+      const reasonText = aiForm.reason.trim() || 'خصم غير مبرر'
+      const isCancelled = aiForm.orderStatus === 'ملغي (كنسل)'
+
+      let bodyText = ''
+      if (isCancelled) {
+        bodyText = `نود الاعتراض على الخصم المالي المسجل على الطلب رقم (${orderNo}) والذي تم إلغاؤه، حيث أن الفرع قام بتحضير الطلب وتجهيزه بالكامل في الوقت المحدد حسب معايير المنصة، ولم يكن الإلغاء بسبب تقصير من طرف المطعم (مرفق لكم صورة الطلب والفاتورة وقت التحضير).`
+      } else {
+        bodyText = `نود الاعتراض على الغرامة المالية المسجلة على الطلب رقم (${orderNo}) بسبب (${reasonText})، حيث قمنا بمراجعة كاميرات المراقبة وسجل التحضير في الفرع وتأكدنا من تسليم الطلب للمندوب كاملاً وبحالة ممتازة ومطابقاً للمواصفات المطلوبة (مرفق صورة الفاتورة وتجهيز الطلب للتحقق).`
+      }
+
+      const fullDraft = `السادة فريق دعم شركاء ${aiForm.app} المحترمين،\nتحية طيبة وبعد،\n\n${bodyText}\n\nلذا نرجو منكم التكرم بإعادة مراجعة تفاصيل الطلب وإلغاء الغرامة المخصومة وإعادة المبلغ إلى حساب المطعم.\n\nشاكرين ومقدرين تعاونكم الدائم،\nإدارة العمليات - ${userName}`
+
+      setAiDraft(fullDraft)
       setIsGeneratingAi(false)
-      showToast('تم توليد مسودة الاعتراض بنجاح!', 'success')
-      setAuditLogs(prev => [{ id: Date.now(), action: 'توليد مسودة اعتراض بالذكاء الاصطناعي للطلب ' + (claimData.orderNumber || ''), user: userName, time: 'الآن', type: 'success' }, ...prev])
-    }, 800)
+      showToast('تم توليد صيغة الاعتراض بنجاح!', 'success')
+      setAuditLogs(prev => [{ id: Date.now(), action: `توليد صيغة اعتراض ذكية للطلب ${orderNo}`, user: userName, time: 'الآن', type: 'success' }, ...prev])
+    }, 500)
   }
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    setIsUploadingImage(true)
-    try {
-      const fileExt = file.name.split('.').pop()
-      const fileName = `evidence_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
-      const filePath = `${fileName}`
-
-      const { error: uploadError } = await supabase.storage
-        .from('evidence')
-        .upload(filePath, file)
-
-      if (uploadError) throw uploadError
-
-      const { data } = supabase.storage.from('evidence').getPublicUrl(filePath)
-      setClaimData(prev => ({ ...prev, evidenceLink: data.publicUrl }))
-      showToast('تم رفع صورة الإثبات بنجاح!', 'success')
-    } catch (error: any) {
-      console.error('Error uploading image:', error)
-      showToast(`فشل رفع الصورة: ${error.message || 'خطأ غير معروف'}`, 'error')
-    } finally {
-      setIsUploadingImage(false)
-    }
+  const handleCopyDraft = () => {
+    if (!aiDraft) return
+    navigator.clipboard.writeText(aiDraft)
+    setCopied(true)
+    showToast('تم نسخ نص الاعتراض! يمكنك لصقه في التطبيق الآن.', 'success')
+    setTimeout(() => setCopied(false), 3000)
   }
 
-  // حفظ المخالفة بحالة "قيد المراجعة" دائماً
   const handleSubmitPenalty = async (e: React.FormEvent) => {
     e.preventDefault();
     const penaltyAmount = parseFloat(formData.amount) || 0;
@@ -351,9 +327,10 @@ export function Dashboard({
       brand: formData.brand,
       branch: formData.branch,
       order_number: formData.orderNumber,
+      order_status: formData.orderStatus,
       amount: penaltyAmount,
       reason: formData.reason,
-      status: t.underReview, // حالة ثابتة افتراضياً
+      status: formData.status,
       created_by: userName
     };
 
@@ -370,9 +347,10 @@ export function Dashboard({
       app: formData.app,
       branch: formData.branch,
       orderNumber: formData.orderNumber,
+      orderStatus: formData.orderStatus,
       amount: penaltyAmount,
       reason: formData.reason,
-      status: t.underReview,
+      status: formData.status,
       restaurantName: formData.restaurantName,
       brand: formData.brand
     } as any;
@@ -380,56 +358,8 @@ export function Dashboard({
     setRows(prev => [newPenalty, ...prev]);
     showToast(t.successMsg, 'success');
     setIsAddModalOpen(false);
-    setFormData({ app: '', restaurantName: '', brand: '', branch: '', orderNumber: '', amount: '', refundedAmount: '', reason: '', status: t.underReview });
-    setAuditLogs(prev => [{ id: Date.now(), action: `تسجيل مخالفة جديدة بقيمة ${formData.amount} رس لفرع ${formData.branch} (قيد المراجعة)`, user: userName, time: 'الآن', type: 'info' }, ...prev]);
-  }
-
-  // حفظ المطالبة وتحديث حالة المخالفة مباشرة في جدول penalties
-  const handleSubmitClaim = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanOrderNumber = claimData.orderNumber.trim();
-
-    // 1. تسجيل المطالبة في جدول claims
-    const { data, error } = await supabase.from('claims').insert([{
-      order_number: cleanOrderNumber,
-      branch: branch !== ALL_BRANCHES ? branch : 'الكل',
-      status: claimData.status,
-      rejection_reason: claimData.rejectionReason,
-      evidence_link: claimData.evidenceLink,
-      created_by: userName
-    }]).select();
-
-    if (error) {
-      console.error('خطأ Supabase أثناء حفظ المطالبة:', error.message);
-      showToast(`خطأ في حفظ المطالبة: ${error.message}`, 'error');
-      return;
-    }
-
-    // 2. تحديث سجل المخالفة الأصلي في قاعدة بيانات Supabase ليسمع فوراً
-    const { error: penaltyUpdateError } = await supabase
-      .from('penalties')
-      .update({ status: claimData.status })
-      .eq('order_number', cleanOrderNumber);
-
-    if (penaltyUpdateError) {
-      console.warn('تنبيه: تم تسجيل المطالبة ولكن لم يتم العثور على مخالفة مطابقة لرقم الطلب لتحديثها:', penaltyUpdateError.message);
-    }
-
-    // 3. تحديث الواجهة والـ State لحظياً لجدول المخالفات والمطالبات ونسبة الاسترداد
-    setRows(prevRows => prevRows.map(r => {
-      if (String(r.orderNumber).trim() === cleanOrderNumber) {
-        return { ...r, status: claimData.status };
-      }
-      return r;
-    }));
-
-    if (data && data[0]) {
-      setDbClaims(prev => [data[0], ...prev]);
-    }
-
-    showToast(t.claimSuccess, 'success');
-    setClaimData({ orderNumber: '', status: t.refunded, rejectionReason: '', evidenceLink: '' });
-    setAuditLogs(prev => [{ id: Date.now(), action: `حسم المطالبة وتحديث حالة المخالفة للطلب ${cleanOrderNumber} إلى (${claimData.status})`, user: userName, time: 'الآن', type: 'warning' }, ...prev]);
+    setFormData({ app: '', restaurantName: '', brand: '', branch: '', orderNumber: '', orderStatus: 'تم التوصيل', amount: '', reason: '', status: t.underReview });
+    setAuditLogs(prev => [{ id: Date.now(), action: `تسجيل مخالفة جديدة بقيمة ${formData.amount} رس لفرع ${formData.branch}`, user: userName, time: 'الآن', type: 'info' }, ...prev]);
   }
 
   const isRtl = lang === 'ar';
@@ -480,24 +410,26 @@ export function Dashboard({
           <thead>
             <tr className="bg-gray-100 text-black border-b border-black">
               {t.headers.map((h, i) => (
-                <th key={i} className="border border-black px-4 py-2 font-bold">{h}</th>
+                <th key={i} className="border border-black px-3 py-2 font-bold">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {filteredByBranch.map((r, i) => {
+            {filteredByBranch.map((r: any, i) => {
               const formattedDate = r.date ? new Date(r.date).toISOString().split('T')[0] : '—'
               return (
                 <tr key={i} className="border-b border-black">
-                  <td className="border border-black px-4 py-2">{formattedDate}</td>
-                  <td className="border border-black px-4 py-2">{r.app}</td>
-                  <td className="border border-black px-4 py-2">{(r as any).restaurantName || '—'}</td>
-                  <td className="border border-black px-4 py-2">{(r as any).brand || '—'}</td>
-                  <td className="border border-black px-4 py-2">{r.branch}</td>
-                  <td className="border border-black px-4 py-2">{r.orderNumber || '—'}</td>
-                  <td className="border border-black px-4 py-2 font-bold">{r.amount} رس</td>
-                  <td className="border border-black px-4 py-2">{r.reason || '—'}</td>
-                  <td className="border border-black px-4 py-2">{r.status}</td>
+                  <td className="border border-black px-3 py-2">{formattedDate}</td>
+                  <td className="border border-black px-3 py-2">{r.app}</td>
+                  <td className="border border-black px-3 py-2">{r.restaurantName || r.restaurant_name || '—'}</td>
+                  <td className="border border-black px-3 py-2">{r.brand || '—'}</td>
+                  <td className="border border-black px-3 py-2">{r.branch}</td>
+                  <td className="border border-black px-3 py-2">{r.orderNumber || '—'}</td>
+                  <td className="border border-black px-3 py-2">{r.orderStatus || r.order_status || 'تم التوصيل'}</td>
+                  <td className="border border-black px-3 py-2 font-bold">{r.amount} رس</td>
+                  <td className="border border-black px-3 py-2">{r.reason || '—'}</td>
+                  <td className="border border-black px-3 py-2">{r.status}</td>
+                  <td className="border border-black px-3 py-2">{r.rejectionReason || r.rejection_reason || '—'}</td>
                 </tr>
               )
             })}
@@ -524,7 +456,7 @@ export function Dashboard({
             {[
               { id: 'dashboard', icon: LayoutDashboard, label: t.dashboard },
               { id: 'penalties', icon: AlertTriangle, label: t.penalties },
-              { id: 'claims', icon: FileText, label: t.claims },
+              { id: 'claims', icon: Sparkles, label: t.claims },
               { id: 'restaurants', icon: Store, label: t.restaurants },
               { id: 'audit', icon: History, label: t.auditLog },
               { id: 'leaderboard', icon: Award, label: t.teamLeaderboard }
@@ -748,13 +680,14 @@ export function Dashboard({
 
                   <div className="bg-white dark:bg-white/5 backdrop-blur-xl rounded-3xl shadow-xl border border-slate-200 dark:border-white/10 overflow-hidden">
                     <div className="p-6 border-b border-slate-100 dark:border-white/10 flex items-center justify-between flex-wrap gap-4 bg-slate-50/50 dark:bg-white/5">
-                      <div className="flex items-center gap-2 bg-white dark:bg-[#060913] p-1.5 rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm">
+                      <div className="flex items-center gap-2 bg-white dark:bg-[#060913] p-1.5 rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm flex-wrap">
                         <Filter className="size-4 text-slate-400 mr-2 ml-1" />
                         {[
                           { id: 'ALL', label: t.allStatus },
                           { id: 'REVIEW', label: t.filterReview },
                           { id: 'REFUNDED', label: t.filterRefunded },
-                          { id: 'REJECTED', label: t.filterRejected }
+                          { id: 'REJECTED', label: t.filterRejected },
+                          { id: 'MISSING_IMAGE', label: t.filterMissingImg }
                         ].map(btn => (
                           <button
                             key={btn.id}
@@ -770,138 +703,121 @@ export function Dashboard({
                         ))}
                       </div>
                     </div>
-                    <PenaltiesTable key={branch + statusFilter + rows.length} rows={filtered} />
+                    <PenaltiesTable 
+                      key={branch + statusFilter + rows.length} 
+                      rows={filtered} 
+                      onUpdateRow={handleUpdatePenaltyRow}
+                    />
                   </div>
                 </div>
               )}
 
+              {/* قسم صانع الاعتراضات الذكي */}
               {activeTab === 'claims' && (
-                <div className="flex flex-col gap-8">
+                <div className="max-w-4xl mx-auto flex flex-col gap-8">
                   <div className="bg-white dark:bg-white/5 backdrop-blur-xl p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-white/10 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-72 h-72 bg-blue-500/10 dark:bg-blue-600/20 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
-                    <div className="flex items-center justify-between mb-8 relative">
-                      <div>
-                        <h3 className="text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-3"><FileText className="size-7 text-blue-600 dark:text-blue-400" /> {t.claimFormTitle}</h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">تحديث نتيجة الاعتراض هنا سيقوم تلقائياً بتحديث حالة المخالفة الأصلية في قاعدة البيانات وجدول المخالفات.</p>
-                      </div>
-                      <button 
-                        type="button" 
-                        onClick={handleGenerateAiObjection} 
-                        disabled={isGeneratingAi}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-extrabold rounded-2xl shadow-lg shadow-purple-500/25 transition-all border border-white/20"
-                      >
-                        <Sparkles className="size-4 text-amber-300" /> {isGeneratingAi ? 'جاري التوليد...' : t.generateAiText}
-                      </button>
+                    <div className="absolute top-0 right-0 w-72 h-72 bg-purple-500/10 dark:bg-purple-600/20 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
+                    
+                    <div className="mb-8 relative">
+                      <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white flex items-center gap-3">
+                        <span className="p-3 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/30">
+                          <Sparkles className="size-6" />
+                        </span>
+                        صانع الاعتراضات الذكي (AI)
+                      </h3>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+                        أدخل رقم الطلب وسبب الغرامة ليقوم النظام بصياغة رد رسمي احترافي جاهز للنسخ واللصق مباشرة في بوابة تطبيق التوصيل.
+                      </p>
                     </div>
 
-                    {aiDraft && (
-                      <div className="mb-8 p-6 rounded-2xl bg-purple-50 dark:bg-purple-950/20 border border-purple-500/30 text-slate-800 dark:text-slate-200">
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="text-xs font-extrabold text-purple-600 dark:text-purple-400 flex items-center gap-2">
-                            <Sparkles className="size-4" /> مسودة الاعتراض الذكية جاهزة للنسخ:
-                          </span>
-                          <button onClick={() => { navigator.clipboard.writeText(aiDraft); showToast('تم نسخ المسودة للحافظة!', 'success') }} className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">نسخ النص</button>
-                        </div>
-                        <p className="text-sm whitespace-pre-line leading-relaxed font-medium">{aiDraft}</p>
-                      </div>
-                    )}
-
-                    <form onSubmit={handleSubmitClaim} className="grid grid-cols-1 md:grid-cols-2 gap-8 relative">
-                      <div className="space-y-3">
-                        <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.claimOrderNumber} <span className="text-red-500">*</span></label>
+                    <form onSubmit={handleGenerateAiObjection} className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
+                      <div className="space-y-2.5">
+                        <label className="text-sm font-bold text-slate-700 dark:text-slate-300">رقم الطلب <span className="text-red-500">*</span></label>
                         <input 
                           type="text" 
                           required 
-                          placeholder="أدخل رقم الطلب المسجل في المخالفات بالضبط"
-                          className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none text-slate-900 dark:text-white" 
-                          value={claimData.orderNumber} 
-                          onChange={e => setClaimData({...claimData, orderNumber: e.target.value})} 
+                          placeholder="مثال: 8492041"
+                          className="w-full h-12 px-4 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-purple-500 outline-none text-slate-900 dark:text-white font-mono" 
+                          value={aiForm.orderNumber} 
+                          onChange={e => setAiForm({...aiForm, orderNumber: e.target.value})} 
                         />
                       </div>
-                      
-                      <div className="space-y-3">
-                        <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.claimStatus} <span className="text-red-500">*</span></label>
+
+                      <div className="space-y-2.5">
+                        <label className="text-sm font-bold text-slate-700 dark:text-slate-300">منصة التوصيل</label>
                         <select 
-                          required 
-                          className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none text-slate-900 dark:text-white" 
-                          value={claimData.status} 
-                          onChange={e => setClaimData({...claimData, status: e.target.value})}
+                          className="w-full h-12 px-4 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-purple-500 outline-none text-slate-900 dark:text-white font-bold" 
+                          value={aiForm.app} 
+                          onChange={e => setAiForm({...aiForm, app: e.target.value})}
                         >
-                          <option value={t.refunded} className="bg-white dark:bg-[#060913]">تم الاسترداد (نجاح الاعتراض)</option>
-                          <option value={t.rejected} className="bg-white dark:bg-[#060913]">مرفوضة (رفض التطبيق)</option>
-                          <option value={t.missingImage} className="bg-white dark:bg-[#060913]">بدون صورة</option>
-                          <option value={t.underReview} className="bg-white dark:bg-[#060913]">قيد المراجعة (معلق)</option>
+                          <option value="هنقرستيشن">هنقرستيشن</option>
+                          <option value="جاهز">جاهز</option>
+                          <option value="تويو">تويو</option>
+                          <option value="ذا شيفز">ذا شيفز</option>
+                          <option value="نينجا">نينجا</option>
                         </select>
                       </div>
 
-                      <div className="space-y-3 md:col-span-2">
-                        <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.claimRejectionReason}</label>
+                      <div className="space-y-2.5">
+                        <label className="text-sm font-bold text-slate-700 dark:text-slate-300">حالة الطلب</label>
+                        <select 
+                          className="w-full h-12 px-4 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-purple-500 outline-none text-slate-900 dark:text-white font-bold" 
+                          value={aiForm.orderStatus} 
+                          onChange={e => setAiForm({...aiForm, orderStatus: e.target.value})}
+                        >
+                          <option value="تم التوصيل">تم التوصيل</option>
+                          <option value="ملغي (كنسل)">ملغي (كنسل)</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-2.5 md:col-span-3">
+                        <label className="text-sm font-bold text-slate-700 dark:text-slate-300">سبب الغرامة أو تفاصيل المشكلة <span className="text-red-500">*</span></label>
                         <input 
                           type="text" 
-                          placeholder="سبب الرفض أو ملاحظات الاسترداد إن وجدت"
-                          className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none text-slate-900 dark:text-white" 
-                          value={claimData.rejectionReason} 
-                          onChange={e => setClaimData({...claimData, rejectionReason: e.target.value})} 
+                          required
+                          placeholder="مثال: العميل يدعي نقص صنف، أو تأخير المندوب في استلام الطلب..."
+                          className="w-full h-12 px-4 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-purple-500 outline-none text-slate-900 dark:text-white" 
+                          value={aiForm.reason} 
+                          onChange={e => setAiForm({...aiForm, reason: e.target.value})} 
                         />
                       </div>
 
-                      <div className="space-y-3 md:col-span-2">
-                        <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.claimEvidence}</label>
-                        <div className="flex flex-col sm:flex-row items-center gap-4">
-                          <label className="flex-1 w-full flex items-center justify-center gap-3 h-14 px-5 rounded-2xl border-2 border-dashed border-slate-300 dark:border-white/20 bg-slate-50 dark:bg-[#060913] hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer transition-all">
-                            {isUploadingImage ? (
-                              <Loader2 className="size-5 text-blue-500 animate-spin" />
-                            ) : (
-                              <Upload className="size-5 text-blue-500" />
-                            )}
-                            <span className="text-sm font-bold text-slate-600 dark:text-slate-300">
-                              {isUploadingImage ? 'جاري رفع الصورة إلى التخزين...' : 'اختر صورة الفاتورة / الإثبات من جهازك'}
-                            </span>
-                            <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} disabled={isUploadingImage} />
-                          </label>
-
-                          {claimData.evidenceLink && (
-                            <a href={claimData.evidenceLink} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-4 py-3.5 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl text-xs font-bold border border-blue-500/20 whitespace-nowrap hover:underline">
-                              <ImageIcon className="size-4" /> معاينة الصورة المرفوعة
-                            </a>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="md:col-span-2 flex justify-end mt-4 pt-8 border-t border-slate-100 dark:border-white/10">
-                        <button type="submit" disabled={isUploadingImage} className="px-10 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-sm font-extrabold shadow-xl shadow-blue-500/25 transition-all hover:-translate-y-0.5 border border-white/20 disabled:opacity-50">
-                          {t.saveClaim}
+                      <div className="md:col-span-3 flex justify-end pt-4">
+                        <button 
+                          type="submit" 
+                          disabled={isGeneratingAi}
+                          className="w-full md:w-auto flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-sm font-extrabold rounded-2xl shadow-xl shadow-purple-500/25 transition-all hover:-translate-y-0.5 border border-white/20"
+                        >
+                          <Sparkles className="size-5 text-amber-300" />
+                          {isGeneratingAi ? 'جاري صياغة الاعتراض...' : 'توليد صيغة الاعتراض الآن'}
                         </button>
                       </div>
                     </form>
-                  </div>
 
-                  <div className="bg-white dark:bg-white/5 backdrop-blur-xl rounded-3xl shadow-xl border border-slate-200 dark:border-white/10 overflow-hidden">
-                    <div className="p-6 border-b border-slate-100 dark:border-white/10 bg-slate-50/50 dark:bg-white/5"><h3 className="text-lg font-bold text-slate-900 dark:text-white">سجل المطالبات الحالي</h3></div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm text-right">
-                        <thead><tr className="border-b border-slate-100 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 text-slate-500 dark:text-slate-400"><th className="px-6 py-5 font-bold">رقم الطلب</th><th className="px-6 py-5 font-bold">الفرع / المطعم</th><th className="px-6 py-5 font-bold">سبب الرفض</th><th className="px-6 py-5 font-bold">الإثبات</th><th className="px-6 py-5 font-bold">حالة المطالبة</th></tr></thead>
-                        <tbody>
-                          {claimsList.length === 0 ? (<tr><td colSpan={5} className="px-6 py-16 text-center text-slate-400 font-medium">لا توجد مطالبات مسجلة حتى الآن</td></tr>) : (
-                            claimsList.map((r, i) => (
-                              <tr key={i} className="border-b border-slate-100 dark:border-white/5 last:border-0 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
-                                <td className="px-6 py-5 font-mono text-sm font-bold text-slate-800 dark:text-slate-200" dir="ltr">{r.orderNumber}</td>
-                                <td className="px-6 py-5 font-bold text-slate-900 dark:text-white whitespace-nowrap">{r.branch}</td>
-                                <td className="px-6 py-5 text-slate-600 dark:text-slate-300 font-medium">{(r as any).rejectionReason || '—'}</td>
-                                <td className="px-6 py-5">
-                                  {(r as any).evidenceLink ? (
-                                    <a href={(r as any).evidenceLink} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold hover:underline bg-blue-50 dark:bg-blue-500/10 px-3 py-1.5 rounded-xl w-fit border border-blue-500/20">
-                                      <ImageIcon className="size-4" /> فتح الإثبات
-                                    </a>
-                                  ) : '—'}
-                                </td>
-                                <td className="px-6 py-5"><span className={`px-4 py-2 rounded-xl text-xs font-bold shadow-sm ${r.status === t.refunded ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30' : r.status === t.rejected ? 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 border border-red-500/30' : r.status === t.missingImage ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/30' : 'bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 border border-white/10'}`}>{r.status}</span></td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
+                    {aiDraft && (
+                      <div className="mt-8 p-6 rounded-3xl bg-purple-50/80 dark:bg-purple-950/20 border-2 border-purple-500/30 text-slate-800 dark:text-slate-200 animate-in fade-in zoom-in-95 duration-300">
+                        <div className="flex items-center justify-between mb-4 pb-3 border-b border-purple-500/20">
+                          <span className="text-sm font-extrabold text-purple-700 dark:text-purple-300 flex items-center gap-2">
+                            <Sparkles className="size-4" /> صيغة الاعتراض الجاهزة:
+                          </span>
+                          <button 
+                            type="button"
+                            onClick={handleCopyDraft} 
+                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all shadow-md ${
+                              copied 
+                                ? 'bg-emerald-600 text-white' 
+                                : 'bg-blue-600 hover:bg-blue-500 text-white'
+                            }`}
+                          >
+                            {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+                            {copied ? 'تم النسخ بنجاح!' : 'نسخ النص بالكامل'}
+                          </button>
+                        </div>
+                        <p className="text-sm whitespace-pre-line leading-relaxed font-bold select-all bg-white dark:bg-[#060913] p-5 rounded-2xl border border-slate-200 dark:border-white/10">
+                          {aiDraft}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1010,17 +926,30 @@ export function Dashboard({
                   <div className="space-y-3"><label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.brand}</label><input type="text" className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white" value={formData.brand} onChange={e => setFormData({...formData, brand: e.target.value})} /></div>
                   <div className="space-y-3"><label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.branch}</label><input type="text" required className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white" value={formData.branch} onChange={e => setFormData({...formData, branch: e.target.value})} /></div>
                   <div className="space-y-3"><label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.orderNumber}</label><input type="text" className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white" value={formData.orderNumber} onChange={e => setFormData({...formData, orderNumber: e.target.value})} /></div>
+                  
+                  {/* اختيار حالة الطلب (تم التوصيل / ملغي) */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.orderStatus}</label>
+                    <select className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white font-bold" value={formData.orderStatus} onChange={e => setFormData({...formData, orderStatus: e.target.value})}>
+                      <option value="تم التوصيل" className="bg-white dark:bg-[#060913]">تم التوصيل</option>
+                      <option value="ملغي (كنسل)" className="bg-white dark:bg-[#060913]">ملغي (كنسل)</option>
+                    </select>
+                  </div>
+
                   <div className="space-y-3"><label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.amount}</label><input type="number" required min="0" step="0.01" className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} /></div>
                   
-                  {/* حالة المخالفة مغلقة ومثبتة قيد المراجعة افتراضياً لمنع التلاعب */}
+                  {/* اختيار حالة الاعتراض عند الإدخال */}
                   <div className="space-y-3">
                     <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.status}</label>
-                    <div className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-sm flex items-center font-bold text-amber-600 dark:text-amber-400 select-none">
-                      {t.underReview} (يتم التحديث لاحقاً من المطالبات)
-                    </div>
+                    <select className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white font-bold" value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})}>
+                      <option value="قيد المراجعة" className="bg-white dark:bg-[#060913]">قيد المراجعة</option>
+                      <option value="تم الاسترداد" className="bg-white dark:bg-[#060913]">تم الاسترداد</option>
+                      <option value="مرفوضة" className="bg-white dark:bg-[#060913]">مرفوضة</option>
+                      <option value="لم يتم إرسال صورة للتحقق" className="bg-white dark:bg-[#060913]">لم يتم إرسال صورة للتحقق</option>
+                    </select>
                   </div>
                   
-                  <div className="space-y-3"><label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.reason}</label><input type="text" className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white" value={formData.reason} onChange={e => setFormData({...formData, reason: e.target.value})} /></div>
+                  <div className="space-y-3 md:col-span-2"><label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.reason}</label><input type="text" className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white" value={formData.reason} onChange={e => setFormData({...formData, reason: e.target.value})} /></div>
                 </div>
                 <div className="mt-10 flex justify-end gap-4 pt-8 border-t border-slate-100 dark:border-white/10">
                   <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-8 py-3.5 rounded-2xl border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-slate-300 font-bold transition-colors">{t.cancel}</button>
