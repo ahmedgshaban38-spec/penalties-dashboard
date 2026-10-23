@@ -24,7 +24,7 @@ export default function LoginPage() {
 
     try {
       if (isSignUp) {
-        // 1. تسجيل مطعم جديد وحساب جديد في Supabase Auth مع حفظ بيانات المطعم في الـ Metadata
+        // 1. إنشاء الحساب مع تفعيل الحساب وتجاوز قيود التفعيل اليدوي
         const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -39,7 +39,7 @@ export default function LoginPage() {
 
         if (signUpError) throw signUpError
 
-        // 2. إدراج المطعم تلقائياً في جدول المطاعم (restaurants) العام للمنصة
+        // 2. حفظ المطعم في جدول المطاعم العام
         if (restaurantName) {
           await supabase.from('restaurants').upsert([
             {
@@ -50,24 +50,27 @@ export default function LoginPage() {
           ], { onConflict: 'name' })
         }
 
-        setSuccessMsg('تم إنشاء حساب المطعم بنجاح! جاري تحويلك لوحة التحكم...')
+        setSuccessMsg('تم إنشاء الحساب وتسجيل الدخول بنجاح!')
         setTimeout(() => {
-          window.location.reload()
-        }, 1500)
+          window.location.href = '/'
+        }, 1000)
 
       } else {
-        // تسجيل الدخول العادي
-        const { error: signInError } = await supabase.auth.signInWithPassword({
+        // 3. تسجيل الدخول المباشر
+        const { data, error: signInError } + await supabase.auth.signInWithPassword({
           email,
           password,
         })
 
         if (signInError) throw signInError
 
-        window.location.reload()
+        setSuccessMsg('تم تسجيل الدخول بنجاح! جاري التوجيه...')
+        setTimeout(() => {
+          window.location.href = '/'
+        }, 800)
       }
     } catch (err: any) {
-      setError(err.message || 'حدث خطأ أثناء المصادقة، يرجى المحاولة مرة أخرى.')
+      setError(err.message || 'حدث خطأ في البريد الإلكتروني أو كلمة المرور. يرجى التحقق والتجربة مرة أخرى.')
     } finally {
       setLoading(false)
     }
@@ -75,11 +78,10 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-100 p-6 relative overflow-hidden font-sans" dir="rtl">
-      {/* خلفيات جمالية مضيئة */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl pointer-events-none"></div>
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl pointer-events-none"></div>
 
-      <div className="w-full max-w-md bg-slate-900/80 backdrop-blur-2xl border border-slate-800 rounded-[2.5p] p-8 shadow-2xl relative z-10">
+      <div className="w-full max-w-md bg-slate-900/80 backdrop-blur-2xl border border-slate-800 rounded-[2.5rem] p-8 shadow-2xl relative z-10">
         <div className="flex flex-col items-center mb-8 text-center">
           <div className="size-16 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-xl shadow-blue-500/25 mb-4">
             <Truck className="size-8" />
