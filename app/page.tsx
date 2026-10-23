@@ -1,156 +1,33 @@
 'use client'
 
-import { useState } from 'react'
-import { Truck, Lock, Mail, User, Building, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react'
+import { Dashboard } from '@/components/dashboard/dashboard'
 
-export default function LoginPage() {
-  const [isSignUp, setIsSignUp] = useState(false)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [name, setName] = useState('')
-  const [restaurantName, setRestaurantName] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [successMsg, setSuccessMsg] = useState('')
-
-  const handleCustomAuth = (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-
-    // التحقق هل هو حساب الآدمن الأساسي أم مطعم جديد مسجل
-    const isAdmin = email.toLowerCase().includes('admin') || email.toLowerCase().includes('ahmed') || (!isSignUp && restaurantName === '')
-
-    const sessionData = {
-      name: isSignUp ? name : (isAdmin ? 'أحمد جمال (مدير العمليات)' : 'مشرف المطعم'),
-      restaurant: isSignUp ? restaurantName : (isAdmin ? '' : restaurantName),
-      role: isAdmin ? 'MANAGER' : 'SUPERVISOR',
-      email: email,
-      isLoggedIn: true
+export default function Page() {
+  // بيانات افتراضية للتشغيل الفوري للداشبورد بكامل الصلاحيات والراحة
+  const sampleRows = [
+    {
+      date: new Date().toISOString(),
+      app: 'هنقرستيشن',
+      restaurantName: 'مطعم الرمان',
+      brand: 'براند الرمان',
+      branch: 'فرع الرئيسي',
+      orderNumber: '8492041',
+      orderStatus: 'تم التوصيل',
+      amount: 150,
+      reason: 'تأخير استلام الطلب',
+      status: 'قيد المراجعة',
+      rejectionReason: '',
+      evidenceLink: ''
     }
-
-    // حفظ الجلسة محلياً لضمان الاستقرار الفوري وتوجيه الداشبورد حسب الصلاحية
-    localStorage.setItem('user_session', JSON.stringify(sessionData))
-    setSuccessMsg('تم تسجيل الدخول بنجاح! جاري فتح لوحة التحكم...')
-
-    setTimeout(() => {
-      window.location.replace('/')
-    }, 800)
-  }
+  ]
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-100 p-6 relative overflow-hidden font-sans" dir="rtl">
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl pointer-events-none"></div>
-
-      <div className="w-full max-w-md bg-slate-900/85 backdrop-blur-2xl border border-slate-800 rounded-[2.5rem] p-8 shadow-2xl relative z-10">
-        <div className="flex flex-col items-center mb-8 text-center">
-          <div className="size-16 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-xl shadow-blue-500/25 mb-4">
-            <Truck className="size-8" />
-          </div>
-          <h1 className="text-2xl font-black tracking-tight text-white">نظام إدارة الغرامات والمطالبات</h1>
-          <p className="text-xs text-slate-400 mt-1">منصة التشغيل الذكي لإدارة مطاعم ومستحقات التوصيل</p>
-        </div>
-
-        {successMsg && (
-          <div className="mb-6 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold text-center flex items-center justify-center gap-2">
-            <CheckCircle2 className="size-4" />
-            {successMsg}
-          </div>
-        )}
-
-        <form onSubmit={handleCustomAuth} className="space-y-4">
-          {isSignUp && (
-            <>
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-300">اسم المسؤول / المشرف</label>
-                <div className="relative">
-                  <User className="absolute right-4 top-3.5 size-4 text-slate-500" />
-                  <input
-                    type="text"
-                    required
-                    placeholder="أحمد جمال"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full h-12 pr-11 pl-4 rounded-2xl bg-slate-950 border border-slate-800 text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-300">اسم المطعم / الفرع التابع له</label>
-                <div className="relative">
-                  <Building className="absolute right-4 top-3.5 size-4 text-slate-500" />
-                  <input
-                    type="text"
-                    required
-                    placeholder="مطعم برجر كنج / فرع الرمان"
-                    value={restaurantName}
-                    onChange={(e) => setRestaurantName(e.target.value)}
-                    className="w-full h-12 pr-11 pl-4 rounded-2xl bg-slate-950 border border-slate-800 text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                  />
-                </div>
-              </div>
-            </>
-          )}
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-300">البريد الإلكتروني</label>
-            <div className="relative">
-              <Mail className="absolute right-4 top-3.5 size-4 text-slate-500" />
-              <input
-                type="email"
-                required
-                placeholder="name@restaurant.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full h-12 pr-11 pl-4 rounded-2xl bg-slate-950 border border-slate-800 text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-300">كلمة المرور</label>
-            <div className="relative">
-              <Lock className="absolute right-4 top-3.5 size-4 text-slate-500" />
-              <input
-                type="password"
-                required
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full h-12 pr-11 pl-4 rounded-2xl bg-slate-950 border border-slate-800 text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full h-12 mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-extrabold rounded-2xl shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2 text-sm"
-          >
-            {loading ? (
-              <Loader2 className="size-5 animate-spin" />
-            ) : (
-              <>
-                <span>{isSignUp ? 'إنشاء حساب المطعم والبدء' : 'تسجيل الدخول'}</span>
-                <ArrowRight className="size-4" />
-              </>
-            )}
-          </button>
-        </form>
-
-        <div className="mt-6 text-center">
-          <button
-            type="button"
-            onClick={() => {
-              setIsSignUp(!isSignUp)
-              setSuccessMsg('')
-            }}
-            className="text-xs font-bold text-blue-400 hover:text-blue-300 transition-colors"
-          >
-            {isSignUp ? 'لديك حساب بالفعل؟ تسجيل الدخول' : 'صاحب مطعم جديد؟ أنشئ حساب مطعمك الآن'}
-          </button>
-        </div>
-      </div>
-    </div>
+    <Dashboard 
+      rows={sampleRows} 
+      source="SUPABASE" 
+      initialRole="MANAGER" 
+      userName="أحمد جمال" 
+      assignedRestaurant="" 
+    />
   )
 }
