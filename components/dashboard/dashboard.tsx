@@ -83,6 +83,7 @@ export function Dashboard({
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [userRole] = useState<'MANAGER' | 'SUPERVISOR'>(initialRole)
   
+  // حالات صانع الاعتراضات الذكي
   const [aiForm, setAiForm] = useState({
     orderNumber: '',
     app: 'هنقرستيشن',
@@ -144,7 +145,7 @@ export function Dashboard({
     orderStatus: 'تم التوصيل',
     amount: '', 
     reason: '', 
-    status: 'قيد المراجعة' 
+    status: t.underReview 
   })
 
   // استخراج أسماء المطاعم للفلتر العلوي
@@ -175,7 +176,7 @@ export function Dashboard({
     if (statusFilter === 'REVIEW') return list.filter(r => r.status === 'قيد المراجعة' || r.status === 'Under Review')
     if (statusFilter === 'REFUNDED') return list.filter(r => r.status === 'تم الاسترداد' || r.status === 'Refunded')
     if (statusFilter === 'REJECTED') return list.filter(r => r.status === 'مرفوضة' || r.status === 'Rejected')
-    if (statusFilter === 'MISSING_IMAGE') return list.filter(r => r.status === 'لم يتم إرسال صورة للتحقق' || r.status === 'بدون صورة' || r.status === 'Missing Image' || r.status === 'No Verification Image Sent')
+    if (statusFilter === 'MISSING_IMAGE') return list.filter(r => r.status === 'لم يتم إرسال صورة للتحقق' || r.status === 'بدون صورة' || r.status === 'Missing Image')
     return list
   }, [filteredByBranch, statusFilter])
 
@@ -240,6 +241,7 @@ export function Dashboard({
     return Object.values(stats).map(s => ({ ...s, branchesCount: s.branches.size })).sort((a, b) => b.totalAmount - a.totalAmount)
   }, [filteredByBranch])
 
+  // تحديث الصف لحظياً من داخل جدول المخالفات
   const handleUpdatePenaltyRow = (orderNo: string, updates: Partial<any>) => {
     setRows(prev => prev.map(r => {
       if (String(r.orderNumber).trim() === orderNo) {
@@ -247,7 +249,7 @@ export function Dashboard({
       }
       return r
     }))
-    showToast(lang === 'ar' ? 'تم تحديث بيانات المخالفة بنجاح!' : 'Penalty updated successfully!', 'success')
+    showToast('تم تحديث بيانات المخالفة بنجاح!', 'success')
     setAuditLogs(prev => [{ id: Date.now(), action: `تحديث بيانات الطلب رقم ${orderNo} في جدول المخالفات`, user: userName, time: 'الآن', type: 'info' }, ...prev])
   }
 
@@ -280,6 +282,7 @@ export function Dashboard({
     }
   }
 
+  // توليد صيغة اعتراض ذكية ومفصلة حسب السبب وحالة الطلب
   const handleGenerateAiObjection = (e: React.FormEvent) => {
     e.preventDefault()
     setIsGeneratingAi(true)
@@ -355,7 +358,7 @@ export function Dashboard({
     setRows(prev => [newPenalty, ...prev]);
     showToast(t.successMsg, 'success');
     setIsAddModalOpen(false);
-    setFormData({ app: '', restaurantName: '', brand: '', branch: '', orderNumber: '', orderStatus: 'تم التوصيل', amount: '', reason: '', status: 'قيد المراجعة' });
+    setFormData({ app: '', restaurantName: '', brand: '', branch: '', orderNumber: '', orderStatus: 'تم التوصيل', amount: '', reason: '', status: t.underReview });
     setAuditLogs(prev => [{ id: Date.now(), action: `تسجيل مخالفة جديدة بقيمة ${formData.amount} رس لفرع ${formData.branch}`, user: userName, time: 'الآن', type: 'info' }, ...prev]);
   }
 
@@ -484,7 +487,7 @@ export function Dashboard({
               <div className="overflow-hidden">
                 <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{userName}</p>
                 <p className="text-xs text-blue-600 dark:text-blue-400 font-extrabold truncate">
-                  {userRole === 'MANAGER' ? t.roleManager : t.roleSupervisor}
+                  {userRole === 'MANAGER' ? 'مدير العمليات (صلاحية كاملة)' : 'مشرف الفرع (صلاحية إدخال)'}
                 </p>
               </div>
             </div>
@@ -587,17 +590,17 @@ export function Dashboard({
                         <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t.totalFinesLabel}</span>
                         <div className="mt-4 flex items-baseline gap-2">
                           <span className="text-3xl font-extrabold text-slate-900 dark:text-white font-mono">{totalFines.toLocaleString()}</span>
-                          <span className="text-sm font-semibold text-slate-400">{lang === 'ar' ? 'رس' : 'SAR'}</span>
+                          <span className="text-sm font-semibold text-slate-400">رس</span>
                         </div>
-                        <span className="text-xs text-slate-400 mt-2">{lang === 'ar' ? `من ${filteredByBranch.length} مخالفة نشطة` : `From ${filteredByBranch.length} active records`}</span>
+                        <span className="text-xs text-slate-400 mt-2">من {filteredByBranch.length} مخالفة نشطة</span>
                       </div>
                       <div className="bg-slate-50 dark:bg-[#060913] p-6 rounded-2xl border border-slate-100 dark:border-white/10 flex flex-col justify-between">
                         <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t.totalRefundedLabel}</span>
                         <div className="mt-4 flex items-baseline gap-2">
                           <span className="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">{totalRefunded.toLocaleString()}</span>
-                          <span className="text-sm font-semibold text-slate-400">{lang === 'ar' ? 'رس' : 'SAR'}</span>
+                          <span className="text-sm font-semibold text-slate-400">رس</span>
                         </div>
-                        <span className="text-xs text-emerald-500/80 mt-2 font-medium">{lang === 'ar' ? 'تم استرجاعها بنجاح' : 'Successfully recovered'}</span>
+                        <span className="text-xs text-emerald-500/80 mt-2 font-medium">تم استرجاعها بنجاح</span>
                       </div>
                       <div className="bg-slate-50 dark:bg-[#060913] p-6 rounded-2xl border border-slate-100 dark:border-white/10 flex flex-col justify-between">
                         <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t.recoveryRateLabel}</span>
@@ -624,15 +627,15 @@ export function Dashboard({
                       </h3>
                       <div className="space-y-4">
                         {branchStats.length === 0 ? (
-                          <p className="text-sm text-slate-400">{lang === 'ar' ? 'لا توجد بيانات' : 'No data available'}</p>
+                          <p className="text-sm text-slate-400">لا توجد بيانات</p>
                         ) : (
                           branchStats.map(([branchName, data], i) => (
                             <div key={i} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-[#060913] rounded-2xl border border-slate-100 dark:border-white/10">
                               <div>
                                 <p className="font-extrabold text-slate-900 dark:text-white text-sm">{branchName}</p>
-                                <span className="text-xs text-slate-400">{data.count} {lang === 'ar' ? 'مخالفة مسجلة' : 'penalties'}</span>
+                                <span className="text-xs text-slate-400">{data.count} مخالفة مسجلة</span>
                               </div>
-                              <span className="font-mono font-extrabold text-red-600 dark:text-red-400 text-sm">{data.amount.toLocaleString()} {lang === 'ar' ? 'رس' : 'SAR'}</span>
+                              <span className="font-mono font-extrabold text-red-600 dark:text-red-400 text-sm">{data.amount.toLocaleString()} رس</span>
                             </div>
                           ))
                         )}
@@ -646,15 +649,15 @@ export function Dashboard({
                       </h3>
                       <div className="space-y-4">
                         {reasonStats.length === 0 ? (
-                          <p className="text-sm text-slate-400">{lang === 'ar' ? 'لا توجد بيانات' : 'No data available'}</p>
+                          <p className="text-sm text-slate-400">لا توجد بيانات</p>
                         ) : (
                           reasonStats.map(([reason, data], i) => (
                             <div key={i} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-[#060913] rounded-2xl border border-slate-100 dark:border-white/10">
                               <div className="max-w-[70%]">
                                 <p className="font-bold text-slate-900 dark:text-white text-sm truncate">{reason}</p>
-                                <span className="text-xs text-slate-400">{data.count} {lang === 'ar' ? 'مرات تكرار' : 'occurrences'}</span>
+                                <span className="text-xs text-slate-400">{data.count} مرات تكرار</span>
                               </div>
-                              <span className="font-mono font-extrabold text-slate-700 dark:text-slate-300 text-sm">{data.amount.toLocaleString()} {lang === 'ar' ? 'رس' : 'SAR'}</span>
+                              <span className="font-mono font-extrabold text-slate-700 dark:text-slate-300 text-sm">{data.amount.toLocaleString()} رس</span>
                             </div>
                           ))
                         )}
@@ -701,15 +704,15 @@ export function Dashboard({
                       </div>
                     </div>
                     <PenaltiesTable 
-                      key={branch + statusFilter + rows.length + lang} 
+                      key={branch + statusFilter + rows.length} 
                       rows={filtered} 
                       onUpdateRow={handleUpdatePenaltyRow}
-                      lang={lang}
                     />
                   </div>
                 </div>
               )}
 
+              {/* قسم صانع الاعتراضات الذكي */}
               {activeTab === 'claims' && (
                 <div className="max-w-4xl mx-auto flex flex-col gap-8">
                   <div className="bg-white dark:bg-white/5 backdrop-blur-xl p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-white/10 relative overflow-hidden">
@@ -720,22 +723,20 @@ export function Dashboard({
                         <span className="p-3 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/30">
                           <Sparkles className="size-6" />
                         </span>
-                        {t.claimsHistory}
+                        صانع الاعتراضات الذكي (AI)
                       </h3>
                       <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-                        {lang === 'ar' 
-                          ? 'أدخل رقم الطلب وسبب الغرامة ليقوم النظام بصياغة رد رسمي احترافي جاهز للنسخ واللصق مباشرة في بوابة تطبيق التوصيل.'
-                          : 'Enter the order number and penalty reason to automatically generate a formal objection ready to copy and paste.'}
+                        أدخل رقم الطلب وسبب الغرامة ليقوم النظام بصياغة رد رسمي احترافي جاهز للنسخ واللصق مباشرة في بوابة تطبيق التوصيل.
                       </p>
                     </div>
 
                     <form onSubmit={handleGenerateAiObjection} className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
                       <div className="space-y-2.5">
-                        <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.orderNumber} <span className="text-red-500">*</span></label>
+                        <label className="text-sm font-bold text-slate-700 dark:text-slate-300">رقم الطلب <span className="text-red-500">*</span></label>
                         <input 
                           type="text" 
                           required 
-                          placeholder="8492041"
+                          placeholder="مثال: 8492041"
                           className="w-full h-12 px-4 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-purple-500 outline-none text-slate-900 dark:text-white font-mono" 
                           value={aiForm.orderNumber} 
                           onChange={e => setAiForm({...aiForm, orderNumber: e.target.value})} 
@@ -743,7 +744,7 @@ export function Dashboard({
                       </div>
 
                       <div className="space-y-2.5">
-                        <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.app}</label>
+                        <label className="text-sm font-bold text-slate-700 dark:text-slate-300">منصة التوصيل</label>
                         <select 
                           className="w-full h-12 px-4 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-purple-500 outline-none text-slate-900 dark:text-white font-bold" 
                           value={aiForm.app} 
@@ -758,23 +759,23 @@ export function Dashboard({
                       </div>
 
                       <div className="space-y-2.5">
-                        <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.orderStatus}</label>
+                        <label className="text-sm font-bold text-slate-700 dark:text-slate-300">حالة الطلب</label>
                         <select 
                           className="w-full h-12 px-4 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-purple-500 outline-none text-slate-900 dark:text-white font-bold" 
                           value={aiForm.orderStatus} 
                           onChange={e => setAiForm({...aiForm, orderStatus: e.target.value})}
                         >
-                          <option value="تم التوصيل">{lang === 'ar' ? 'تم التوصيل' : 'Delivered'}</option>
-                          <option value="ملغي (كنسل)">{lang === 'ar' ? 'ملغي (كنسل)' : 'Cancelled'}</option>
+                          <option value="تم التوصيل">تم التوصيل</option>
+                          <option value="ملغي (كنسل)">ملغي (كنسل)</option>
                         </select>
                       </div>
 
                       <div className="space-y-2.5 md:col-span-3">
-                        <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.reason} <span className="text-red-500">*</span></label>
+                        <label className="text-sm font-bold text-slate-700 dark:text-slate-300">سبب الغرامة أو تفاصيل المشكلة <span className="text-red-500">*</span></label>
                         <input 
                           type="text" 
                           required
-                          placeholder={lang === 'ar' ? 'مثال: العميل يدعي نقص صنف، أو تأخير المندوب في استلام الطلب...' : 'e.g., Customer claims missing item, or driver delay...'}
+                          placeholder="مثال: العميل يدعي نقص صنف، أو تأخير المندوب في استلام الطلب..."
                           className="w-full h-12 px-4 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-purple-500 outline-none text-slate-900 dark:text-white" 
                           value={aiForm.reason} 
                           onChange={e => setAiForm({...aiForm, reason: e.target.value})} 
@@ -788,7 +789,7 @@ export function Dashboard({
                           className="w-full md:w-auto flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-sm font-extrabold rounded-2xl shadow-xl shadow-purple-500/25 transition-all hover:-translate-y-0.5 border border-white/20"
                         >
                           <Sparkles className="size-5 text-amber-300" />
-                          {isGeneratingAi ? 'جاري صياغة الاعتراض...' : (lang === 'ar' ? 'توليد صيغة الاعتراض الآن' : 'Generate Objection Text')}
+                          {isGeneratingAi ? 'جاري صياغة الاعتراض...' : 'توليد صيغة الاعتراض الآن'}
                         </button>
                       </div>
                     </form>
@@ -797,7 +798,7 @@ export function Dashboard({
                       <div className="mt-8 p-6 rounded-3xl bg-purple-50/80 dark:bg-purple-950/20 border-2 border-purple-500/30 text-slate-800 dark:text-slate-200 animate-in fade-in zoom-in-95 duration-300">
                         <div className="flex items-center justify-between mb-4 pb-3 border-b border-purple-500/20">
                           <span className="text-sm font-extrabold text-purple-700 dark:text-purple-300 flex items-center gap-2">
-                            <Sparkles className="size-4" /> {lang === 'ar' ? 'صيغة الاعتراض الجاهزة:' : 'Generated Objection Draft:'}
+                            <Sparkles className="size-4" /> صيغة الاعتراض الجاهزة:
                           </span>
                           <button 
                             type="button"
@@ -809,7 +810,7 @@ export function Dashboard({
                             }`}
                           >
                             {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-                            {copied ? (lang === 'ar' ? 'تم النسخ بنجاح!' : 'Copied!') : (lang === 'ar' ? 'نسخ النص بالكامل' : 'Copy Full Text')}
+                            {copied ? 'تم النسخ بنجاح!' : 'نسخ النص بالكامل'}
                           </button>
                         </div>
                         <p className="text-sm whitespace-pre-line leading-relaxed font-bold select-all bg-white dark:bg-[#060913] p-5 rounded-2xl border border-slate-200 dark:border-white/10">
@@ -901,7 +902,7 @@ export function Dashboard({
                             <div><h4 className="font-extrabold text-xl text-slate-900 dark:text-white">{stat.name}</h4><p className="text-sm font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-1.5"><MapPin className="size-4 text-blue-500 dark:text-blue-400" /> {stat.branchesCount} {t.branchesCount}</p></div>
                           </div>
                           <div className="flex justify-between items-center bg-slate-50 dark:bg-[#060913] p-5 rounded-2xl border border-slate-100 dark:border-white/10 relative">
-                            <div><p className="text-xs font-bold text-slate-400 dark:text-slate-500 mb-1.5 uppercase tracking-wider">{t.totalFines}</p><p className="font-extrabold text-red-600 dark:text-red-400 text-lg">{stat.totalAmount.toLocaleString()} {lang === 'ar' ? 'رس' : 'SAR'}</p></div>
+                            <div><p className="text-xs font-bold text-slate-400 dark:text-slate-500 mb-1.5 uppercase tracking-wider">{t.totalFines}</p><p className="font-extrabold text-red-600 dark:text-red-400 text-lg">{stat.totalAmount.toLocaleString()} رس</p></div>
                             <div className="text-right border-r border-slate-200 dark:border-white/10 pr-6"><p className="text-xs font-bold text-slate-400 dark:text-slate-500 mb-1.5 uppercase tracking-wider">{t.penaltiesCount}</p><p className="font-extrabold text-slate-900 dark:text-white text-lg">{stat.penaltyCount}</p></div>
                           </div>
                         </div>
@@ -926,23 +927,25 @@ export function Dashboard({
                   <div className="space-y-3"><label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.branch}</label><input type="text" required className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white" value={formData.branch} onChange={e => setFormData({...formData, branch: e.target.value})} /></div>
                   <div className="space-y-3"><label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.orderNumber}</label><input type="text" className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white" value={formData.orderNumber} onChange={e => setFormData({...formData, orderNumber: e.target.value})} /></div>
                   
+                  {/* اختيار حالة الطلب (تم التوصيل / ملغي) */}
                   <div className="space-y-3">
                     <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.orderStatus}</label>
                     <select className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white font-bold" value={formData.orderStatus} onChange={e => setFormData({...formData, orderStatus: e.target.value})}>
-                      <option value="تم التوصيل" className="bg-white dark:bg-[#060913]">{lang === 'ar' ? 'تم التوصيل' : 'Delivered'}</option>
-                      <option value="ملغي (كنسل)" className="bg-white dark:bg-[#060913]">{lang === 'ar' ? 'ملغي (كنسل)' : 'Cancelled'}</option>
+                      <option value="تم التوصيل" className="bg-white dark:bg-[#060913]">تم التوصيل</option>
+                      <option value="ملغي (كنسل)" className="bg-white dark:bg-[#060913]">ملغي (كنسل)</option>
                     </select>
                   </div>
 
                   <div className="space-y-3"><label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.amount}</label><input type="number" required min="0" step="0.01" className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} /></div>
                   
+                  {/* اختيار حالة الاعتراض عند الإدخال */}
                   <div className="space-y-3">
                     <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.status}</label>
                     <select className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white font-bold" value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})}>
-                      <option value="قيد المراجعة" className="bg-white dark:bg-[#060913]">{lang === 'ar' ? 'قيد المراجعة' : 'Under Review'}</option>
-                      <option value="تم الاسترداد" className="bg-white dark:bg-[#060913]">{lang === 'ar' ? 'تم الاسترداد' : 'Refunded'}</option>
-                      <option value="مرفوضة" className="bg-white dark:bg-[#060913]">{lang === 'ar' ? 'مرفوضة' : 'Rejected'}</option>
-                      <option value="لم يتم إرسال صورة للتحقق" className="bg-white dark:bg-[#060913]">{lang === 'ar' ? 'لم يتم إرسال صورة للتحقق' : 'No Verification Image Sent'}</option>
+                      <option value="قيد المراجعة" className="bg-white dark:bg-[#060913]">قيد المراجعة</option>
+                      <option value="تم الاسترداد" className="bg-white dark:bg-[#060913]">تم الاسترداد</option>
+                      <option value="مرفوضة" className="bg-white dark:bg-[#060913]">مرفوضة</option>
+                      <option value="لم يتم إرسال صورة للتحقق" className="bg-white dark:bg-[#060913]">لم يتم إرسال صورة للتحقق</option>
                     </select>
                   </div>
                   
