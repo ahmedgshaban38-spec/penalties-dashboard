@@ -24,7 +24,7 @@ export default function LoginPage() {
 
     try {
       if (isSignUp) {
-        // 1. إنشاء الحساب مع تفعيل الحساب وتجاوز قيود التفعيل اليدوي
+        // 1. إنشاء الحساب الجديد
         const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -39,7 +39,7 @@ export default function LoginPage() {
 
         if (signUpError) throw signUpError
 
-        // 2. حفظ المطعم في جدول المطاعم العام
+        // 2. إدراج المطعم في جدول المطاعم العام
         if (restaurantName) {
           await supabase.from('restaurants').upsert([
             {
@@ -50,28 +50,26 @@ export default function LoginPage() {
           ], { onConflict: 'name' })
         }
 
-        setSuccessMsg('تم إنشاء الحساب وتسجيل الدخول بنجاح!')
-        setTimeout(() => {
-          window.location.href = '/'
-        }, 1000)
-
+        setSuccessMsg('تم إنشاء الحساب بنجاح! جاري الدخول...')
       } else {
-        // 3. تسجيل الدخول المباشر
-        const { data, error: signInError } + await supabase.auth.signInWithPassword({
+        // 3. تسجيل الدخول
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
         })
 
         if (signInError) throw signInError
 
-        setSuccessMsg('تم تسجيل الدخول بنجاح! جاري التوجيه...')
-        setTimeout(() => {
-          window.location.href = '/'
-        }, 800)
+        setSuccessMsg('تم تسجيل الدخول بنجاح!')
       }
+
+      // إجبار التوجيه وإعادة تحميل الصفحة لتحديث الجلسة بالكامل
+      setTimeout(() => {
+        window.location.replace('/')
+      }, 600)
+
     } catch (err: any) {
-      setError(err.message || 'حدث خطأ في البريد الإلكتروني أو كلمة المرور. يرجى التحقق والتجربة مرة أخرى.')
-    } finally {
+      setError(err.message || 'حدث خطأ في بيانات الدخول، يرجى التحقق.')
       setLoading(false)
     }
   }
