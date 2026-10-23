@@ -2,37 +2,72 @@
 
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Truck, Lock, Mail, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react'
+import { Truck, Lock, Mail, User, Building, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react'
 
 export default function LoginPage() {
+  const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
+  const [restaurantName, setRestaurantName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
     setSuccessMsg('')
 
     try {
-      // تسجيل الدخول المباشر على قاعدة بيانات Supabase الخاصة بك
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
+      if (isSignUp) {
+        // 1. تسجيل مطعم جديد وحساب جديد في Supabase Auth مع حفظ اسم المطعم والصلاحية في الـ Metadata
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              name: name || 'مدير المطعم',
+              restaurant: restaurantName,
+              role: 'SUPERVISOR' // مشرف مطعم بصلاحية مخصصة لمطعمه فقط
+            }
+          }
+        })
 
-      if (signInError) throw signInError
+        if (signUpError) throw signUpError
 
-      setSuccessMsg('تم تسجيل الدخول بنجاح! جاري فتح لوحة التحكم...')
+        // 2. حفظ المطعم في جدول المطاعم العام للنظام
+        if (restaurantName) {
+          await supabase.from('restaurants').upsert([
+            {
+              name: restaurantName,
+              owner_name: name,
+              owner_email: email,
+            }
+          ], { onConflict: 'name' })
+        }
+
+        setSuccessMsg('تم إنشاء حساب المطعم بنجاح! جاري الدخول...')
+      } else {
+        // 3. تسجيل الدخول العادي للإيميل المسجل مسبقاً (سواء أدمن أو مشرف مطعم)
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
+
+        if (signInError) throw signInError
+
+        setSuccessMsg('تم تسجيل الدخول بنجاح! جاري فتح لوحة التحكم...')
+      }
+
+      // إعادة توجيه وتحديث الصفحة للداشبورد فوراً
       setTimeout(() => {
         window.location.replace('/')
       }, 800)
 
     } catch (err: any) {
-      setError(err.message || 'خطأ في البريد الإلكتروني أو كلمة المرور.')
+      setError(err.message || 'حدث خطأ في البيانات، يرجى التحقق والتجربة مرة أخرى.')
       setLoading(false)
     }
   }
@@ -48,7 +83,7 @@ export default function LoginPage() {
             <Truck className="size-8" />
           </div>
           <h1 className="text-2xl font-black tracking-tight text-white">نظام إدارة الغرامات والمطالبات</h1>
-          <p className="text-xs text-slate-400 mt-1">تسجيل الدخول لحساب الإدارة والمشرفين</p>
+          <p className="text-xs text-slate-400 mt-1">منصة التشغيل الذكي لإدارة مطاعم ومستحقات التوصيل</p>
         </div>
 
         {error && (
@@ -64,7 +99,41 @@ export default function LoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleAuth} className="space-y-4">
+          {isSignUp && (
+            <>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300">اسم المسؤول / المشرف</label>
+                <div className="relative">
+                  <User className="absolute right-4 top-3.5 size-4 text-slate-500" />
+                  <input
+                    type="text"
+                    required
+                    placeholder="أحمد جمال"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full h-12 pr-11 pl-4 rounded-2xl bg-slate-950 border border-slate-800 text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300">اسم المطعم / البراند الرئيسي</label>
+                <div className="relative">
+                  <Building className="absolute right-4 top-3.5 size-4 text-slate-500" />
+                  <input
+                    type="text"
+                    required
+                    placeholder="مطعم برجر كنج / فرع الرمان"
+                    value={restaurantName}
+                    onChange={(e) => setRestaurantName(e.target.value)}
+                    className="w-full h-12 pr-11 pl-4 rounded-2xl bg-slate-950 border border-slate-800 text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-300">البريد الإلكتروني</label>
             <div className="relative">
@@ -72,7 +141,7 @@ export default function LoginPage() {
               <input
                 type="email"
                 required
-                placeholder="admin@foodizone.com"
+                placeholder="name@restaurant.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full h-12 pr-11 pl-4 rounded-2xl bg-slate-950 border border-slate-800 text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
@@ -104,12 +173,26 @@ export default function LoginPage() {
               <Loader2 className="size-5 animate-spin" />
             ) : (
               <>
-                <span>تسجيل الدخول</span>
+                <span>{isSignUp ? 'إنشاء حساب المطعم والبدء' : 'تسجيل الدخول'}</span>
                 <ArrowRight className="size-4" />
               </>
             )}
           </button>
         </form>
+
+        <div className="mt-6 text-center">
+          <button
+            type="button"
+            onClick={() => {
+              setIsSignUp(!isSignUp)
+              setError('')
+              setSuccessMsg('')
+            }}
+            className="text-xs font-bold text-blue-400 hover:text-blue-300 transition-colors"
+          >
+            {isSignUp ? 'لديك حساب بالفعل؟ تسجيل الدخول' : 'صاحب مطعم جديد؟ أنشئ حساب مطعمك الآن'}
+          </button>
+        </div>
       </div>
     </div>
   )
