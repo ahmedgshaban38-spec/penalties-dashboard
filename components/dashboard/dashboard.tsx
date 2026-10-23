@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, useEffect, useRef } from 'react'
-import { AlertCircle, Database, Truck, LayoutDashboard, AlertTriangle, FileText, Store, LogOut, Plus, Download, Printer, X, Globe, MapPin, CheckCircle, Moon, Sun, ShieldCheck, ArrowUpRight, Bell, Filter, Clock, Sparkles, History, FileDown, Award, Copy, Check, Lock } from 'lucide-react'
+import { AlertCircle, Database, Truck, LayoutDashboard, AlertTriangle, FileText, Store, LogOut, Plus, Download, Printer, X, Globe, MapPin, CheckCircle, Moon, Sun, ShieldCheck, ArrowUpRight, Bell, Filter, Clock, Sparkles, History, FileDown, Award, Copy, Check } from 'lucide-react'
 import type { DataSource, Penalty } from '@/lib/penalties'
 import { supabase } from '@/lib/supabase'
 import { BranchFilter, ALL_BRANCHES } from './branch-filter'
@@ -33,7 +33,7 @@ const dict = {
     allStatus: 'الكل', filterReview: 'قيد المراجعة', filterRefunded: 'تم الاسترداد', filterRejected: 'مرفوضة', filterMissingImg: 'لم يتم إرسال صورة للتحقق',
     printHeaderTitle: 'التقرير التنفيذي لإدارة الغرامات والمطالبات', printDate: 'تاريخ التقرير:',
     slaWarning: 'مؤشر مهل الاعتراض الحرجة',
-    roleManager: 'مدير العمليات (صلاحية كاملة)', roleSupervisor: 'مشرف مطعم (صلاحية مخصصة)',
+    roleManager: 'مدير العمليات (صلاحية كاملة)', roleSupervisor: 'مشرف الفرع (صلاحية إدخال)',
     auditLogTitle: 'سجل التدقيق والمتابعة التاريخية', auditDesc: 'متابعة لحظية لكافة العمليات والتعديلات المسجلة في النظام',
     leaderboardTitle: 'لوحة شرف أداء المشرفين ومعدل الاسترداد'
   },
@@ -58,7 +58,7 @@ const dict = {
     allStatus: 'All', filterReview: 'Under Review', filterRefunded: 'Refunded', filterRejected: 'Rejected', filterMissingImg: 'No Image Sent',
     printHeaderTitle: 'Executive Penalties & Claims Report', printDate: 'Report Date:',
     slaWarning: 'Critical SLA Objection Deadlines',
-    roleManager: 'Operations Manager (Full Access)', roleSupervisor: 'Restaurant Supervisor (Restricted)',
+    roleManager: 'Operations Manager (Full Access)', roleSupervisor: 'Branch Supervisor (Input Access)',
     auditLogTitle: 'Activity Audit Trail', auditDesc: 'Real-time tracking of all operations and records updates in the system',
     leaderboardTitle: 'Supervisors Performance & Recovery Leaderboard'
   }
@@ -68,14 +68,12 @@ export function Dashboard({
   rows: initialRows, 
   source, 
   initialRole = 'SUPERVISOR',
-  userName: initialUserName = 'أحمد جمال',
-  assignedRestaurant: initialAssignedRestaurant = ''
+  userName = 'أحمد جمال'
 }: { 
   rows: Penalty[]; 
   source: DataSource; 
   initialRole?: 'MANAGER' | 'SUPERVISOR';
   userName?: string;
-  assignedRestaurant?: string;
 }) {
   const [lang, setLang] = useState<'ar' | 'en'>('ar') 
   const t = dict[lang] 
@@ -83,15 +81,8 @@ export function Dashboard({
   const [rows, setRows] = useState<Penalty[]>(initialRows)
   const [isDark, setIsDark] = useState(false)
   const [statusFilter, setStatusFilter] = useState('ALL')
+  const [userRole] = useState<'MANAGER' | 'SUPERVISOR'>(initialRole)
   
-  const [userRole, setUserRole] = useState<'MANAGER' | 'SUPERVISOR'>(initialRole)
-  const [userName, setUserName] = useState(initialUserName)
-  const [userRestaurant, setUserRestaurant] = useState(initialAssignedRestaurant)
-  
-  const [branch, setBranch] = useState(initialAssignedRestaurant || ALL_BRANCHES)
-  const [activeTab, setActiveTab] = useState('dashboard')
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
-
   const [aiForm, setAiForm] = useState({
     orderNumber: '',
     app: 'هنقرستيشن',
@@ -106,40 +97,8 @@ export function Dashboard({
   const reportRef = useRef<HTMLDivElement>(null)
 
   const [auditLogs, setAuditLogs] = useState<Array<{ id: number; action: string; user: string; time: string; type: 'success' | 'info' | 'warning' }>>([
-    { id: 1, action: 'تسجيل الدخول للنظام والاتصال بقاعدة البيانات', user: initialUserName, time: 'الآن', type: 'info' }
+    { id: 1, action: 'تسجيل الدخول للنظام والاتصال بقاعدة البيانات', user: userName, time: 'الآن', type: 'info' }
   ])
-
-  const [formData, setFormData] = useState({ 
-    app: '', 
-    restaurantName: initialAssignedRestaurant || '', 
-    brand: '', 
-    branch: '', 
-    orderNumber: '', 
-    orderStatus: 'تم التوصيل',
-    amount: '', 
-    reason: '', 
-    status: 'قيد المراجعة' 
-  })
-
-  // جلب بيانات وصلاحيات المستخدم ومطعمه المخصص مباشرة من جلسة Supabase
-  useEffect(() => {
-    const fetchUserPermissions = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user && user.user_metadata) {
-        const meta = user.user_metadata
-        if (meta.role) setUserRole(meta.role)
-        if (meta.name) setUserName(meta.name)
-        
-        const assignedRest = (meta.restaurant || meta.restaurantName || meta.branch || '').trim()
-        if (assignedRest && meta.role !== 'MANAGER') {
-          setUserRestaurant(assignedRest)
-          setBranch(assignedRest)
-          setFormData(prev => ({ ...prev, restaurantName: assignedRest }))
-        }
-      }
-    }
-    fetchUserPermissions()
-  }, [])
 
   useEffect(() => {
     setRows(initialRows)
@@ -165,51 +124,47 @@ export function Dashboard({
     }
   }
   
+  const [branch, setBranch] = useState(ALL_BRANCHES)
+  const [activeTab, setActiveTab] = useState('dashboard')
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  
   const [toast, setToast] = useState<{message: string, type: 'success'|'error', id: number} | null>(null)
   const showToast = (message: string, type: 'success'|'error' = 'success') => {
     const id = Date.now()
     setToast({ message, type, id })
     setTimeout(() => setToast(current => current?.id === id ? null : current), 3500)
   }
+  
+  const [formData, setFormData] = useState({ 
+    app: '', 
+    restaurantName: '', 
+    brand: '', 
+    branch: '', 
+    orderNumber: '', 
+    orderStatus: 'تم التوصيل',
+    amount: '', 
+    reason: '', 
+    status: 'قيد المراجعة' 
+  })
 
-  // الخطوة الأهم: عزل البيانات حسب صلاحية المستخدم قبل أي عملية عرض أو فلترة
-  const authorizedRows = useMemo(() => {
-    // مدير العمليات يرى كل البيانات
-    if (userRole === 'MANAGER' || !userRestaurant) {
-      return rows
-    }
-    // مشرف المطعم يرى فقط البيانات المطابقة لاسم مطعمه المخصص
-    return rows.filter((r) => {
-      const restName = String((r as any).restaurantName || (r as any).restaurant_name || '').trim()
-      const brandName = String((r as any).brand || '').trim()
-      const branchName = String(r.branch || '').trim()
-      return restName === userRestaurant || brandName === userRestaurant || branchName === userRestaurant
-    })
-  }, [rows, userRole, userRestaurant])
-
-  // استخراج أسماء المطاعم المتاحة للمستخدم في الفلتر العلوي
+  // استخراج أسماء المطاعم للفلتر العلوي
   const branches = useMemo(() => {
-    const names = authorizedRows
+    const names = rows
       .map((r) => String((r as any).restaurantName || (r as any).restaurant_name || (r as any).brand || r.branch || '').trim())
       .filter(Boolean)
     return [...new Set(names)].sort((a, b) => a.localeCompare(b, lang === 'ar' ? 'ar' : 'en'))
-  }, [authorizedRows, lang])
+  }, [rows, lang])
   
-  // فلترة البيانات حسب الاختيار من القائمة العلوية
+  // فلترة البيانات لتجلب كل الفروع والبراندات التابعة للمطعم المختار
   const filteredByBranch = useMemo(() => {
-    if (userRole !== 'MANAGER' && userRestaurant) {
-      return authorizedRows
-    }
-    if (branch === ALL_BRANCHES || branch === 'جميع المطاعم' || branch === 'جميع الفروع والمطاعم') {
-      return authorizedRows
-    }
-    return authorizedRows.filter((r) => {
+    if (branch === ALL_BRANCHES || branch === 'جميع المطاعم' || branch === 'جميع الفروع والمطاعم') return rows
+    return rows.filter((r) => {
       const restName = String((r as any).restaurantName || (r as any).restaurant_name || '').trim()
       const brandName = String((r as any).brand || '').trim()
       const branchName = String(r.branch || '').trim()
       return restName === branch || brandName === branch || branchName === branch
     })
-  }, [authorizedRows, branch, userRole, userRestaurant])
+  }, [rows, branch])
 
   const filtered = useMemo(() => {
     const list = filteredByBranch.map(r => ({
@@ -362,11 +317,10 @@ export function Dashboard({
   const handleSubmitPenalty = async (e: React.FormEvent) => {
     e.preventDefault();
     const penaltyAmount = parseFloat(formData.amount) || 0;
-    const finalRestaurantName = (userRole !== 'MANAGER' && userRestaurant) ? userRestaurant : formData.restaurantName;
 
     const payload = {
       app: formData.app,
-      restaurant_name: finalRestaurantName,
+      restaurant_name: formData.restaurantName,
       brand: formData.brand,
       branch: formData.branch,
       order_number: formData.orderNumber,
@@ -394,24 +348,14 @@ export function Dashboard({
       amount: penaltyAmount,
       reason: formData.reason,
       status: formData.status,
-      restaurantName: finalRestaurantName,
+      restaurantName: formData.restaurantName,
       brand: formData.brand
     } as any;
 
     setRows(prev => [newPenalty, ...prev]);
     showToast(t.successMsg, 'success');
     setIsAddModalOpen(false);
-    setFormData({ 
-      app: '', 
-      restaurantName: (userRole !== 'MANAGER' && userRestaurant) ? userRestaurant : '', 
-      brand: '', 
-      branch: '', 
-      orderNumber: '', 
-      orderStatus: 'تم التوصيل', 
-      amount: '', 
-      reason: '', 
-      status: 'قيد المراجعة' 
-    });
+    setFormData({ app: '', restaurantName: '', brand: '', branch: '', orderNumber: '', orderStatus: 'تم التوصيل', amount: '', reason: '', status: 'قيد المراجعة' });
     setAuditLogs(prev => [{ id: Date.now(), action: `تسجيل مخالفة جديدة بقيمة ${formData.amount} رس لفرع ${formData.branch}`, user: userName, time: 'الآن', type: 'info' }, ...prev]);
   }
 
@@ -435,11 +379,11 @@ export function Dashboard({
         <div className="border-b-2 border-black pb-6 mb-8 flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-black text-black">{t.printHeaderTitle}</h1>
-            <p className="text-sm text-gray-600 mt-1">{userName} · {userRole === 'MANAGER' ? t.roleManager : `${t.roleSupervisor} (${userRestaurant})`}</p>
+            <p className="text-sm text-gray-600 mt-1">{userName} · {userRole === 'MANAGER' ? t.roleManager : t.roleSupervisor}</p>
           </div>
           <div className="text-left">
             <p className="text-sm font-bold">{t.printDate} {new Date().toLocaleDateString()}</p>
-            <p className="text-xs text-gray-500 mt-1">المطعم: {userRole !== 'MANAGER' && userRestaurant ? userRestaurant : branch}</p>
+            <p className="text-xs text-gray-500 mt-1">المطعم: {branch}</p>
           </div>
         </div>
 
@@ -540,7 +484,7 @@ export function Dashboard({
               <div className="overflow-hidden">
                 <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{userName}</p>
                 <p className="text-xs text-blue-600 dark:text-blue-400 font-extrabold truncate">
-                  {userRole === 'MANAGER' ? t.roleManager : (userRestaurant ? `مشرف: ${userRestaurant}` : t.roleSupervisor)}
+                  {userRole === 'MANAGER' ? t.roleManager : t.roleSupervisor}
                 </p>
               </div>
             </div>
@@ -579,17 +523,7 @@ export function Dashboard({
                 </h1>
               </div>
               <div className="flex items-center gap-4">
-                {/* إذا كان المدير، يظهر له فلتر جميع المطاعم، أما المشرف فيظهر له اسم مطعمه فقط مقفلاً */}
-                {userRole === 'MANAGER' || !userRestaurant ? (
-                  <BranchFilter branches={branches} value={branch} onChange={setBranch} />
-                ) : (
-                  <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-blue-50 dark:bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300 font-extrabold text-xs shadow-sm">
-                    <Store className="size-4 text-blue-500" />
-                    <span>مطعم: {userRestaurant}</span>
-                    <Lock className="size-3.5 opacity-60 mr-1" />
-                  </div>
-                )}
-
+                <BranchFilter branches={branches} value={branch} onChange={setBranch} />
                 <button onClick={handleDownloadPdf} disabled={isDownloadingPdf} className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all shadow-md shadow-blue-500/20 border border-white/20">
                   <FileDown className="size-4 text-amber-300" /> {isDownloadingPdf ? 'جاري التحميل...' : t.downloadPdf}
                 </button>
@@ -632,7 +566,7 @@ export function Dashboard({
                   )}
 
                   <div className="flex items-center gap-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-white/5 backdrop-blur-xl px-5 py-3 rounded-2xl w-fit shadow-lg border border-slate-200 dark:border-white/10">
-                    <Database className="size-4 text-emerald-500 dark:text-emerald-400 animate-pulse" /> {t.connected} · <span className="text-slate-900 dark:text-white font-extrabold">{authorizedRows.length} {t.records}</span>
+                    <Database className="size-4 text-emerald-500 dark:text-emerald-400 animate-pulse" /> {t.connected} · <span className="text-slate-900 dark:text-white font-extrabold">{rows.length} {t.records}</span>
                   </div>
 
                   <div className="bg-white/90 dark:bg-[#0a0f1d]/90 backdrop-blur-2xl p-8 rounded-[2rem] border border-slate-200/80 dark:border-white/10 shadow-2xl transition-all relative overflow-hidden">
@@ -728,7 +662,7 @@ export function Dashboard({
                     </div>
                   </div>
 
-                  <InsightsSection rows={filteredByBranch} allRows={authorizedRows} selectedBranch={branch} />
+                  <InsightsSection rows={filteredByBranch} allRows={rows} selectedBranch={branch} />
                 </div>
               )}
 
@@ -767,7 +701,7 @@ export function Dashboard({
                       </div>
                     </div>
                     <PenaltiesTable 
-                      key={branch + statusFilter + authorizedRows.length + lang} 
+                      key={branch + statusFilter + rows.length + lang} 
                       rows={filtered} 
                       onUpdateRow={handleUpdatePenaltyRow}
                       lang={lang}
@@ -987,20 +921,7 @@ export function Dashboard({
               <form onSubmit={handleSubmitPenalty} className="p-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3"><label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.app}</label><select required className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white" value={formData.app} onChange={e => setFormData({...formData, app: e.target.value})}><option value="" className="bg-white dark:bg-[#060913]">{t.selectApp}</option><option value="جاهز" className="bg-white dark:bg-[#060913]">جاهز</option><option value="هنقرستيشن" className="bg-white dark:bg-[#060913]">هنقرستيشن</option><option value="تويو" className="bg-white dark:bg-[#060913]">تويو</option><option value="ذا شيفز" className="bg-white dark:bg-[#060913]">ذا شيفز</option><option value="نينجا" className="bg-white dark:bg-[#060913]">نينجا</option></select></div>
-                  
-                  {/* إذا كان المشرف مربوطاً بمطعم، يكون اسم المطعم مقفلاً على مطعمه فقط */}
-                  <div className="space-y-3">
-                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.restaurantName}</label>
-                    {userRole !== 'MANAGER' && userRestaurant ? (
-                      <div className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-sm flex items-center justify-between font-extrabold text-blue-600 dark:text-blue-400 select-none">
-                        <span>{userRestaurant}</span>
-                        <Lock className="size-4 opacity-60" />
-                      </div>
-                    ) : (
-                      <input type="text" required className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white" value={formData.restaurantName} onChange={e => setFormData({...formData, restaurantName: e.target.value})} />
-                    )}
-                  </div>
-
+                  <div className="space-y-3"><label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.restaurantName}</label><input type="text" required className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white" value={formData.restaurantName} onChange={e => setFormData({...formData, restaurantName: e.target.value})} /></div>
                   <div className="space-y-3"><label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.brand}</label><input type="text" className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white" value={formData.brand} onChange={e => setFormData({...formData, brand: e.target.value})} /></div>
                   <div className="space-y-3"><label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.branch}</label><input type="text" required className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white" value={formData.branch} onChange={e => setFormData({...formData, branch: e.target.value})} /></div>
                   <div className="space-y-3"><label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.orderNumber}</label><input type="text" className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white" value={formData.orderNumber} onChange={e => setFormData({...formData, orderNumber: e.target.value})} /></div>
@@ -1025,4 +946,24 @@ export function Dashboard({
                     </select>
                   </div>
                   
-                  <div className="space-y-3 md:col-span-2"><label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.reason}</label><input type="text" className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white" value={formData.reason} onChange={e => setFormData({...form
+                  <div className="space-y-3 md:col-span-2"><label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.reason}</label><input type="text" className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white" value={formData.reason} onChange={e => setFormData({...formData, reason: e.target.value})} /></div>
+                </div>
+                <div className="mt-10 flex justify-end gap-4 pt-8 border-t border-slate-100 dark:border-white/10">
+                  <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-8 py-3.5 rounded-2xl border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-slate-300 font-bold transition-colors">{t.cancel}</button>
+                  <button type="submit" className="px-8 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold shadow-xl transition-all hover:-translate-y-0.5 border border-white/20">{t.save}</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {toast && (
+          <div className={`fixed bottom-8 ${isRtl ? 'left-8' : 'right-8'} z-[110] flex items-center gap-4 px-6 py-4 rounded-2xl shadow-2xl border animate-in slide-in-from-bottom-8 fade-in duration-300 ${toast.type === 'success' ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-red-600 border-red-500 text-white'}`}>
+            {toast.type === 'success' ? <CheckCircle className="size-6" /> : <AlertCircle className="size-6" />}
+            <p className="text-base font-bold">{toast.message}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
