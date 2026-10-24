@@ -9,7 +9,7 @@ export default function Page() {
   const [session, setSession] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   
-  const [isSignUp, setIsSignUp] = useState(false) // للتبديل بين تسجيل الدخول وإنشاء حساب
+  const [isSignUp, setIsSignUp] = useState(false)
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -26,14 +26,13 @@ export default function Page() {
   const [userName, setUserName] = useState('أحمد جمال')
   const [assignedRestaurant, setAssignedRestaurant] = useState('')
 
-  // التحقق من الجلسة النشطة
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       if (session?.user) {
         setUserName(session.user.user_metadata?.name || 'أحمد جمال')
         setUserRole(session.user.user_metadata?.role || 'MANAGER')
-        setAssignedRestaurant(session.user.user_metadata?.restaurant || '')
+        setAssignedRestaurant(session.user.user_metadata?.restaurant || session.user.user_metadata?.restaurantName || '')
       }
       setLoading(false)
     })
@@ -45,14 +44,13 @@ export default function Page() {
       if (session?.user) {
         setUserName(session.user.user_metadata?.name || 'أحمد جمال')
         setUserRole(session.user.user_metadata?.role || 'MANAGER')
-        setAssignedRestaurant(session.user.user_metadata?.restaurant || '')
+        setAssignedRestaurant(session.user.user_metadata?.restaurant || session.user.user_metadata?.restaurantName || '')
       }
     })
 
     return () => subscription.unsubscribe()
   }, [])
 
-  // جلب المخالفات عند نجاح الدخول
   useEffect(() => {
     if (session) {
       async function fetchPenalties() {
@@ -67,7 +65,6 @@ export default function Page() {
     }
   }, [session])
 
-  // دالة تسجيل الدخول
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setAuthLoading(true)
@@ -84,7 +81,6 @@ export default function Page() {
     }
   }
 
-  // دالة إنشاء حساب مطعم جديد (Self-Service Signup)
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     setAuthLoading(true)
@@ -97,15 +93,17 @@ export default function Page() {
       return
     }
 
-    // 1. إنشاء الحساب في Supabase Auth مع تخزين بيانات المطعم في الـ Metadata
+    const cleanRestName = restaurantName.trim()
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
           name: fullName || 'مسؤول المطعم',
-          role: 'SUPERVISOR', // مشرف خاص بمطعمه فقط
-          restaurant: restaurantName.trim(),
+          role: 'SUPERVISOR',
+          restaurant: cleanRestName,
+          restaurantName: cleanRestName,
           phone: phone
         }
       }
@@ -117,9 +115,8 @@ export default function Page() {
       return
     }
 
-    // 2. تسجيل المطعم في جدول restaurants العام للتتبع
     await supabase.from('restaurants').insert([{
-      name: restaurantName.trim(),
+      name: cleanRestName,
       owner_name: fullName,
       owner_email: email,
       phone: phone
@@ -137,7 +134,6 @@ export default function Page() {
     )
   }
 
-  // إذا لم يتم تسجيل الدخول، اعرض شاشة الدخول والتسجيل
   if (!session) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-100 font-sans p-4 relative overflow-hidden" dir="rtl">
@@ -155,7 +151,6 @@ export default function Page() {
             </p>
           </div>
 
-          {/* أزرار التبديل بين تسجيل الدخول وإنشاء حساب */}
           <div className="grid grid-cols-2 gap-2 bg-slate-950 p-1.5 rounded-2xl mb-6 border border-white/10">
             <button 
               type="button"
@@ -185,7 +180,6 @@ export default function Page() {
             </div>
           )}
 
-          {/* نموذج تسجيل الدخول أو إنشاء الحساب */}
           <form onSubmit={isSignUp ? handleSignUp : handleLogin} className="space-y-4">
             {isSignUp && (
               <>
@@ -289,7 +283,6 @@ export default function Page() {
     )
   }
 
-  // العرض عند تسجيل الدخول بنجاح مع تطبيق عزل البيانات التام
   return (
     <Dashboard 
       rows={rows} 
