@@ -32,7 +32,7 @@ const dict = {
     alertTitle: 'تنبيه تشغيلي عاجل', alertDesc: 'لديك حالات قيد المراجعة تتطلب متابعة مستمرة لضمان الاسترداد.',
     allStatus: 'الكل', filterReview: 'قيد المراجعة', filterRefunded: 'تم الاسترداد', filterRejected: 'مرفوضة', filterMissingImg: 'لم يتم إرسال صورة للتحقق',
     printHeaderTitle: 'التقرير التنفيذي لإدارة الغرامات والمطالبات', printDate: 'تاريخ التقرير:',
-    slaWarning: 'مؤشر مهل الاعتراض الحرجة',
+    slaWarning: 'مؤشر مهل الاعتراض الحرجة (اقتربت عده أيام على الغرامة المعلقة)',
     roleManager: 'مدير العمليات (صلاحية كاملة)', roleSupervisor: 'مشرف الفرع (صلاحية إدخال)',
     auditLogTitle: 'سجل التدقيق والمتابعة التاريخية', auditDesc: 'متابعة لحظية لكافة العمليات والتعديلات المسجلة في النظام',
     leaderboardTitle: 'لوحة شرف أداء المشرفين ومعدل الاسترداد'
@@ -179,6 +179,7 @@ export function Dashboard({
 
   const reviewCount = useMemo(() => filteredByBranch.filter(r => r.status === 'قيد المراجعة' || r.status === 'Under Review').length, [filteredByBranch])
 
+  // حساب مهل الاعتراض الحرجة (SLA Countdown Timers)
   const slaAlerts = useMemo(() => {
     const now = new Date().getTime()
     return filteredByBranch.filter(r => {
@@ -186,7 +187,7 @@ export function Dashboard({
       if (!r.date) return false
       const penaltyDate = new Date(r.date).getTime()
       const diffDays = Math.floor((now - penaltyDate) / (1000 * 60 * 60 * 24))
-      return diffDays >= 3
+      return diffDays >= 2 // تنبيه إذا مر على الغرامة يومين أو أكثر بدون استرداد
     })
   }, [filteredByBranch])
 
@@ -542,21 +543,25 @@ export function Dashboard({
             <div className="animate-in fade-in slide-in-from-bottom-6 duration-500">
               {activeTab === 'dashboard' && (
                 <div className="flex flex-col gap-8">
+                  {/* تفعيل التنبيه الذكي لمهل الاعتراض الحرجة (SLA Countdown Timers) */}
                   {slaAlerts.length > 0 && (
-                    <div className="bg-gradient-to-r from-red-500/10 via-red-500/5 to-transparent border border-red-500/30 p-5 rounded-2xl flex items-center gap-4 backdrop-blur-xl">
-                      <div className="p-3 bg-red-500/20 text-red-500 rounded-xl animate-pulse">
-                        <Clock className="size-5" />
+                    <div className="bg-gradient-to-r from-red-500/15 via-red-500/5 to-transparent border border-red-500/40 p-5 rounded-2xl flex items-center justify-between gap-4 backdrop-blur-xl animate-pulse">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 bg-red-500/25 text-red-500 rounded-xl">
+                          <Clock className="size-6" />
+                        </div>
+                        <div>
+                          <h4 className="font-extrabold text-red-600 dark:text-red-400 text-sm">{t.slaWarning} ({slaAlerts.length})</h4>
+                          <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">تنبيه عاجل: اقتربت مهلة رفع الاعتراض على غرامات معلقة على الانتهاء، يرجى سرعة مراجعتها.</p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="font-extrabold text-red-600 dark:text-red-400 text-sm">{t.slaWarning} ({slaAlerts.length})</h4>
-                        <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">تنبيه: اقتربت مهلة رفع الاعتراض على بعض الغرامات المعلقة على الانتهاء، يرجى سرعة المتابعة.</p>
-                      </div>
+                      <span className="px-4 py-2 bg-red-500 text-white rounded-xl text-xs font-black shadow-lg">حالات حرجة</span>
                     </div>
                   )}
 
                   {reviewCount > 0 && (
                     <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 p-5 rounded-2xl flex items-center gap-4 backdrop-blur-xl">
-                      <div className="p-3 bg-amber-500/20 text-amber-500 rounded-xl animate-bounce">
+                      <div className="p-3 bg-amber-500/20 text-amber-500 rounded-xl">
                         <Bell className="size-5" />
                       </div>
                       <div>
@@ -640,7 +645,6 @@ export function Dashboard({
                       </div>
                     </div>
 
-                    {/* قسم تحليل الأسباب الجذرية للغرامات (Root Cause Analysis) الجديد */}
                     <div className="bg-white/90 dark:bg-[#0a0f1d]/90 backdrop-blur-2xl p-8 rounded-[2rem] border border-slate-200/80 dark:border-white/10 shadow-2xl">
                       <div className="flex items-center justify-between mb-6">
                         <div>
