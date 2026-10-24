@@ -179,7 +179,6 @@ export function Dashboard({
 
   const reviewCount = useMemo(() => filteredByBranch.filter(r => r.status === 'قيد المراجعة' || r.status === 'Under Review').length, [filteredByBranch])
 
-  // حساب مهل الاعتراض الحرجة (SLA Countdown Timers)
   const slaAlerts = useMemo(() => {
     const now = new Date().getTime()
     return filteredByBranch.filter(r => {
@@ -187,7 +186,7 @@ export function Dashboard({
       if (!r.date) return false
       const penaltyDate = new Date(r.date).getTime()
       const diffDays = Math.floor((now - penaltyDate) / (1000 * 60 * 60 * 24))
-      return diffDays >= 2 // تنبيه إذا مر على الغرامة يومين أو أكثر بدون استرداد
+      return diffDays >= 2
     })
   }, [filteredByBranch])
 
@@ -238,6 +237,26 @@ export function Dashboard({
     })
     return Object.values(stats).map(s => ({ ...s, branchesCount: s.branches.size })).sort((a, b) => b.totalAmount - a.totalAmount)
   }, [filteredByBranch])
+
+  // حساب لوحة شرف المشرفين ديناميكياً من بيانات المخالفات الفعلية
+  const leaderboardStats = useMemo(() => {
+    const stats: Record<string, { name: string; resolved: number; recoveredAmount: number }> = {}
+    rows.forEach((r: any) => {
+      const creator = r.created_by || r.createdBy || userName || 'مسؤول النظام'
+      if (!stats[creator]) stats[creator] = { name: creator, resolved: 0, recoveredAmount: 0 }
+      stats[creator].resolved += 1
+      if (r.status === 'تم الاسترداد' || r.status === 'Refunded') {
+        stats[creator].recoveredAmount += Number(r.amount) || 0
+      }
+    })
+    const medals = ['الأول 🥇', 'الثاني 🥈', 'الثالث 🥉']
+    return Object.values(stats)
+      .sort((a, b) => b.recoveredAmount - a.recoveredAmount)
+      .map((item, idx) => ({
+        ...item,
+        rank: medals[idx] || `#${idx + 1}`
+      }))
+  }, [rows, userName])
 
   const handleUpdatePenaltyRow = (orderNo: string, updates: Partial<any>) => {
     setRows(prev => prev.map(r => {
@@ -348,7 +367,8 @@ export function Dashboard({
       reason: formData.reason,
       status: formData.status,
       restaurantName: formData.restaurantName,
-      brand: formData.brand
+      brand: formData.brand,
+      created_by: userName
     } as any;
 
     setRows(prev => [newPenalty, ...prev]);
@@ -543,7 +563,6 @@ export function Dashboard({
             <div className="animate-in fade-in slide-in-from-bottom-6 duration-500">
               {activeTab === 'dashboard' && (
                 <div className="flex flex-col gap-8">
-                  {/* تفعيل التنبيه الذكي لمهل الاعتراض الحرجة (SLA Countdown Timers) */}
                   {slaAlerts.length > 0 && (
                     <div className="bg-gradient-to-r from-red-500/15 via-red-500/5 to-transparent border border-red-500/40 p-5 rounded-2xl flex items-center justify-between gap-4 backdrop-blur-xl animate-pulse">
                       <div className="flex items-center gap-4">
@@ -873,21 +892,17 @@ export function Dashboard({
                 <div className="flex flex-col gap-8">
                   <div className="bg-white dark:bg-white/5 backdrop-blur-xl p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-white/10">
                     <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white mb-3 flex items-center gap-3"><Award className="size-7 text-amber-500" /> {t.leaderboardTitle}</h3>
-                    <p className="text-slate-500 dark:text-slate-400 font-medium text-lg">تقييم ومتابعة أداء المشرفين في معالجة الغرامات وتحصيل المستحقات</p>
+                    <p className="text-slate-500 dark:text-slate-400 font-medium text-lg">تقييم ومتابعة أداء المشرفين في معالجة الغرامات وتحصيل المستحقات بناءً على البيانات الفعلية</p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {[
-                      { name: userName, role: userRole === 'MANAGER' ? 'مدير العمليات الأول' : 'مشرف العمليات', resolved: 42, recovered: '14,500 رس', rank: 'الأول 🥇' },
-                      { name: 'مشرف فرع الرمان', role: 'مسؤول المتابعة', resolved: 28, recovered: '8,200 رس', rank: 'الثاني 🥈' },
-                      { name: 'مشرف فرع النخيل', role: 'مسؤول العمليات', resolved: 19, recovered: '5,100 رس', rank: 'الثالث 🥉' }
-                    ].map((leader, i) => (
+                    {leaderboardStats.map((leader, i) => (
                       <div key={i} className="bg-white dark:bg-white/5 backdrop-blur-xl p-8 rounded-3xl border border-slate-200 dark:border-white/10 shadow-xl flex flex-col justify-between gap-6 relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-bl-full pointer-events-none"></div>
                         <div className="flex items-center gap-4">
                           <div className="size-14 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white font-black text-lg shadow-lg">{leader.rank}</div>
                           <div>
                             <h4 className="font-extrabold text-lg text-slate-900 dark:text-white">{leader.name}</h4>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{leader.role}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">مشرف عمليات معتمد</p>
                           </div>
                         </div>
                         <div className="bg-slate-50 dark:bg-[#060913] p-4 rounded-2xl border border-slate-100 dark:border-white/10 flex justify-between items-center">
@@ -897,7 +912,7 @@ export function Dashboard({
                           </div>
                           <div className="text-right border-r border-slate-200 dark:border-white/10 pr-6">
                             <p className="text-xs text-slate-400 font-bold">المبلغ المحصل</p>
-                            <p className="font-extrabold text-emerald-600 dark:text-emerald-400 text-base mt-1">{leader.recovered}</p>
+                            <p className="font-extrabold text-emerald-600 dark:text-emerald-400 text-base mt-1">{leader.recoveredAmount.toLocaleString()} رس</p>
                           </div>
                         </div>
                       </div>
