@@ -83,7 +83,6 @@ export function Dashboard({
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [userRole] = useState<'MANAGER' | 'SUPERVISOR'>(initialRole)
   
-  // حالات صانع الاعتراضات الذكي
   const [aiForm, setAiForm] = useState({
     orderNumber: '',
     app: 'هنقرستيشن',
@@ -148,7 +147,6 @@ export function Dashboard({
     status: t.underReview 
   })
 
-  // استخراج أسماء المطاعم للفلتر العلوي
   const branches = useMemo(() => {
     const names = rows
       .map((r) => String((r as any).restaurantName || (r as any).restaurant_name || (r as any).brand || r.branch || '').trim())
@@ -156,7 +154,6 @@ export function Dashboard({
     return [...new Set(names)].sort((a, b) => a.localeCompare(b, lang === 'ar' ? 'ar' : 'en'))
   }, [rows, lang])
   
-  // فلترة البيانات لتجلب كل الفروع والبراندات التابعة للمطعم المختار
   const filteredByBranch = useMemo(() => {
     if (branch === ALL_BRANCHES || branch === 'جميع المطاعم' || branch === 'جميع الفروع والمطاعم') return rows
     return rows.filter((r) => {
@@ -241,7 +238,6 @@ export function Dashboard({
     return Object.values(stats).map(s => ({ ...s, branchesCount: s.branches.size })).sort((a, b) => b.totalAmount - a.totalAmount)
   }, [filteredByBranch])
 
-  // تحديث الصف لحظياً من داخل جدول المخالفات
   const handleUpdatePenaltyRow = (orderNo: string, updates: Partial<any>) => {
     setRows(prev => prev.map(r => {
       if (String(r.orderNumber).trim() === orderNo) {
@@ -282,7 +278,6 @@ export function Dashboard({
     }
   }
 
-  // توليد صيغة اعتراض ذكية ومفصلة حسب السبب وحالة الطلب
   const handleGenerateAiObjection = (e: React.FormEvent) => {
     e.preventDefault()
     setIsGeneratingAi(true)
@@ -487,7 +482,7 @@ export function Dashboard({
               <div className="overflow-hidden">
                 <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{userName}</p>
                 <p className="text-xs text-blue-600 dark:text-blue-400 font-extrabold truncate">
-                  {userRole === 'MANAGER' ? 'مدير العمليات (صلاحية كاملة)' : 'مشرف الفرع (صلاحية إدخال)'}
+                  {userRole === 'MANAGER' ? t.roleManager : t.roleSupervisor}
                 </p>
               </div>
             </div>
@@ -498,8 +493,11 @@ export function Dashboard({
               <button 
                 type="button"
                 onClick={async () => {
-                  const { supabase } = await import('@/lib/supabase')
-                  await supabase.auth.signOut()
+                  try {
+                    const { supabase } = await import('@/lib/supabase')
+                    await supabase.auth.signOut()
+                  } catch (e) {}
+                  localStorage.clear()
                   window.location.href = '/'
                 }}
                 title={t.logout}
@@ -712,7 +710,6 @@ export function Dashboard({
                 </div>
               )}
 
-              {/* قسم صانع الاعتراضات الذكي */}
               {activeTab === 'claims' && (
                 <div className="max-w-4xl mx-auto flex flex-col gap-8">
                   <div className="bg-white dark:bg-white/5 backdrop-blur-xl p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-white/10 relative overflow-hidden">
@@ -775,7 +772,7 @@ export function Dashboard({
                         <input 
                           type="text" 
                           required
-                          placeholder="مثال: العميل يدعي نقص صنف، أو تأخير المندوب في استلام الطلب..."
+                          placeholder="مثال: العميل يدعي نقص صنف، أو تأخير المندوب في استلاستلام الطلب..."
                           className="w-full h-12 px-4 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-purple-500 outline-none text-slate-900 dark:text-white" 
                           value={aiForm.reason} 
                           onChange={e => setAiForm({...aiForm, reason: e.target.value})} 
@@ -927,7 +924,6 @@ export function Dashboard({
                   <div className="space-y-3"><label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.branch}</label><input type="text" required className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white" value={formData.branch} onChange={e => setFormData({...formData, branch: e.target.value})} /></div>
                   <div className="space-y-3"><label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.orderNumber}</label><input type="text" className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white" value={formData.orderNumber} onChange={e => setFormData({...formData, orderNumber: e.target.value})} /></div>
                   
-                  {/* اختيار حالة الطلب (تم التوصيل / ملغي) */}
                   <div className="space-y-3">
                     <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.orderStatus}</label>
                     <select className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white font-bold" value={formData.orderStatus} onChange={e => setFormData({...formData, orderStatus: e.target.value})}>
@@ -938,7 +934,6 @@ export function Dashboard({
 
                   <div className="space-y-3"><label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.amount}</label><input type="number" required min="0" step="0.01" className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} /></div>
                   
-                  {/* اختيار حالة الاعتراض عند الإدخال */}
                   <div className="space-y-3">
                     <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.status}</label>
                     <select className="w-full h-12 px-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white font-bold" value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})}>
