@@ -28,7 +28,7 @@ const dict = {
     branchesCount: 'فروع نشطة', totalFines: 'إجمالي الغرامات', penaltiesCount: 'مخالفات مسجلة',
     recoveryTitle: 'حاسبة كفاءة واسترداد الأرباح', recoverySubtitle: 'متابعة المبالغ المستردة مقابل إجمالي الغرامات المخصومة لحظياً',
     totalFinesLabel: 'إجمالي الغرامات المخصومة', totalRefundedLabel: 'إجمالي المبالغ المستردة', recoveryRateLabel: 'نسبة نجاح الاسترداد',
-    branchAnalysis: 'تحليل الغرامات حسب الفروع', topReasons: 'أكثر الغرامات انتشاراً وأسبابها',
+    branchAnalysis: 'تحليل الغرامات حسب الفروع', rootCauseAnalysis: 'تحليل الأسباب الجذرية للغرامات (Root Cause Analysis)', rootCauseDesc: 'أكثر أسباب الخصم تكراراً وتأثيراً على الأرباح لتلافيها مستقبلاً',
     alertTitle: 'تنبيه تشغيلي عاجل', alertDesc: 'لديك حالات قيد المراجعة تتطلب متابعة مستمرة لضمان الاسترداد.',
     allStatus: 'الكل', filterReview: 'قيد المراجعة', filterRefunded: 'تم الاسترداد', filterRejected: 'مرفوضة', filterMissingImg: 'لم يتم إرسال صورة للتحقق',
     printHeaderTitle: 'التقرير التنفيذي لإدارة الغرامات والمطالبات', printDate: 'تاريخ التقرير:',
@@ -53,7 +53,7 @@ const dict = {
     branchesCount: 'Active Branches', totalFines: 'Total Fines', penaltiesCount: 'Recorded Penalties',
     recoveryTitle: 'Recovery & Profit Efficiency Calculator', recoverySubtitle: 'Real-time tracking of refunded amounts vs total deducted fines',
     totalFinesLabel: 'Total Deducted Fines', totalRefundedLabel: 'Total Refunded Amount', recoveryRateLabel: 'Recovery Success Rate',
-    branchAnalysis: 'Branch Penalties Analysis', topReasons: 'Top Frequent Penalty Reasons',
+    branchAnalysis: 'Branch Penalties Analysis', rootCauseAnalysis: 'Root Cause Analysis', rootCauseDesc: 'Most frequent penalty reasons affecting profits to prevent them',
     alertTitle: 'Urgent Operational Alert', alertDesc: 'You have pending review cases requiring continuous follow-up for recovery.',
     allStatus: 'All', filterReview: 'Under Review', filterRefunded: 'Refunded', filterRejected: 'Rejected', filterMissingImg: 'No Image Sent',
     printHeaderTitle: 'Executive Penalties & Claims Report', printDate: 'Report Date:',
@@ -223,7 +223,7 @@ export function Dashboard({
       stats[reason].count += 1
       stats[reason].amount += r.amount || 0
     })
-    return Object.entries(stats).sort((a, b) => b[1].count - a[1].count).slice(0, 5)
+    return Object.entries(stats).sort((a, b) => b[1].amount - a[1].amount).slice(0, 5)
   }, [filteredByBranch])
 
   const restaurantStats = useMemo(() => {
@@ -640,24 +640,45 @@ export function Dashboard({
                       </div>
                     </div>
 
+                    {/* قسم تحليل الأسباب الجذرية للغرامات (Root Cause Analysis) الجديد */}
                     <div className="bg-white/90 dark:bg-[#0a0f1d]/90 backdrop-blur-2xl p-8 rounded-[2rem] border border-slate-200/80 dark:border-white/10 shadow-2xl">
-                      <h3 className="text-lg font-extrabold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
-                        <AlertTriangle className="size-5 text-amber-500" />
-                        {t.topReasons}
-                      </h3>
+                      <div className="flex items-center justify-between mb-6">
+                        <div>
+                          <h3 className="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                            <Sparkles className="size-5 text-purple-500" />
+                            {t.rootCauseAnalysis}
+                          </h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{t.rootCauseDesc}</p>
+                        </div>
+                      </div>
+
                       <div className="space-y-4">
                         {reasonStats.length === 0 ? (
-                          <p className="text-sm text-slate-400">لا توجد بيانات</p>
+                          <p className="text-sm text-slate-400 text-center py-6">لا توجد بيانات كافية للتحليل</p>
                         ) : (
-                          reasonStats.map(([reason, data], i) => (
-                            <div key={i} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-[#060913] rounded-2xl border border-slate-100 dark:border-white/10">
-                              <div className="max-w-[70%]">
-                                <p className="font-bold text-slate-900 dark:text-white text-sm truncate">{reason}</p>
-                                <span className="text-xs text-slate-400">{data.count} مرات تكرار</span>
+                          reasonStats.map(([reason, data], i) => {
+                            const percentage = totalFines > 0 ? Math.round((data.amount / totalFines) * 100) : 0
+                            return (
+                              <div key={i} className="p-4 bg-slate-50 dark:bg-[#060913] rounded-2xl border border-slate-100 dark:border-white/10 flex flex-col gap-3">
+                                <div className="flex items-center justify-between">
+                                  <div className="max-w-[70%]">
+                                    <p className="font-extrabold text-slate-900 dark:text-white text-sm flex items-center gap-2">
+                                      <span className="size-2 rounded-full bg-purple-500"></span>
+                                      {reason}
+                                    </p>
+                                    <span className="text-xs text-slate-400 mt-0.5 block">{data.count} حالات تكرار مسجلة</span>
+                                  </div>
+                                  <div className="text-left">
+                                    <span className="font-mono font-extrabold text-red-600 dark:text-red-400 text-sm">{data.amount.toLocaleString()} رس</span>
+                                    <span className="text-xs font-bold text-slate-400 block mt-0.5">({percentage}% من إجمالي الخسائر)</span>
+                                  </div>
+                                </div>
+                                <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                                  <div className="h-full bg-gradient-to-r from-purple-600 to-indigo-500 rounded-full transition-all duration-500" style={{ width: `${Math.min(percentage, 100)}%` }}></div>
+                                </div>
                               </div>
-                              <span className="font-mono font-extrabold text-slate-700 dark:text-slate-300 text-sm">{data.amount.toLocaleString()} رس</span>
-                            </div>
-                          ))
+                            )
+                          })
                         )}
                       </div>
                     </div>
@@ -772,7 +793,7 @@ export function Dashboard({
                         <input 
                           type="text" 
                           required
-                          placeholder="مثال: العميل يدعي نقص صنف، أو تأخير المندوب في استلاستلام الطلب..."
+                          placeholder="مثال: العميل يدعي نقص صنف، أو تأخير المندوب في استلام الطلب..."
                           className="w-full h-12 px-4 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#060913] text-sm focus:ring-2 focus:ring-purple-500 outline-none text-slate-900 dark:text-white" 
                           value={aiForm.reason} 
                           onChange={e => setAiForm({...aiForm, reason: e.target.value})} 
