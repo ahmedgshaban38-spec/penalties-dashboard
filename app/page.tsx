@@ -51,14 +51,20 @@ export default function Page() {
     return () => subscription.unsubscribe()
   }, [])
 
+  // جلب المخالفات مع عزل البيانات الصارم لكل مطعم
   useEffect(() => {
     if (session) {
       async function fetchPenalties() {
-        const { data } = await supabase
-          .from('penalties')
-          .select('*')
-          .order('created_at', { ascending: false })
-        
+        const role = session.user.user_metadata?.role || 'MANAGER'
+        const restName = session.user.user_metadata?.restaurant || session.user.user_metadata?.restaurantName || ''
+
+        let query = supabase.from('penalties').select('*').order('created_at', { ascending: false })
+
+        if (role !== 'MANAGER' && restName) {
+          query = query.or(`restaurant_name.eq.${restName},restaurantName.eq.${restName},branch.eq.${restName},brand.eq.${restName}`)
+        }
+
+        const { data } = await query
         if (data) setRows(data)
       }
       fetchPenalties()
